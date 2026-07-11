@@ -23,9 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pages must be enabled once for the repo (Settings -> Pages -> Source:
+      # GitHub Actions, or `gh api -X POST repos/<owner>/<repo>/pages -f
+      # build_type=workflow`) — the workflow token cannot create the site.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       # The whole repo is the site: index.html links every paper's
       # interactive preview, render sheets and STL downloads.
