@@ -23,7 +23,7 @@ In `generate.py`, add to `PAPERS`:
 
 ```python
 "kalita-185": {
-    "display": "Kalita Wave 185",      # shown in previews and README images
+    "display": "Kalita Wave 185",      # shown in the preview, Pages index, doc images
     "folder": "kalita",                # output directory (created if missing)
     "side": 130.0,
     "angle": 90.0,
@@ -57,7 +57,8 @@ make docs         # README images into <folder>/docs/
 Open the new preview in a browser and check with the **ghost paper stack**
 toggle that the paper (cream) has visible slack to the walls in every
 direction. `generate.py` prints each part's bounding box — make sure it fits
-your printer bed.
+your printer bed. The landing page (`index.html`) picks the new paper up
+automatically, including its render image and STL download links.
 
 ## 4. Verify with a real paper before publishing
 
@@ -69,5 +70,12 @@ papers in, and confirm:
 - the tab (if any) doesn't touch the wall,
 - papers are easy to pick out.
 
-Then print the matching lid, and update the README's supported-papers table and
-gallery (the index page updates itself).
+Then print the matching lid.
+
+## 5. Publish
+
+- Update the README by hand: add a row to the supported-papers table and an
+  entry (render image + live preview link) to the gallery.
+- Commit and push to `main` — the GitHub Pages site
+  ([ardakilic.github.io/filtarr](https://ardakilic.github.io/filtarr/))
+  republishes automatically, new folders included; nothing to configure.

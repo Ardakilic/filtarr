@@ -1,9 +1,10 @@
 # Filtarr
 
 3D-printable, dust-proof storage boxes for **pour-over paper filters** — currently
-CAFEC Deep 27 and Hario V60 (01 & 02) cone papers, in three case designs, each with an
-optional engraved lid. Everything is generated from one parametric Python script;
-adding a new paper is one registry entry ([HOWTO](HOWTO.md)).
+five papers (CAFEC Deep 27, Hario/CAFEC V60 sizes 01 & 02, and compact tabless CAFEC
+cone variants) in three case designs, each with an optional engraved lid. Everything
+is generated from one parametric Python script; adding a new paper is one registry
+entry ([HOWTO](HOWTO.md)).
 
 **Browse the interactive 3D previews and download STLs at
 [ardakilic.github.io/filtarr](https://ardakilic.github.io/filtarr/).**
@@ -90,8 +91,10 @@ fully self-contained HTML file (no internet needed), open in any browser:
 - [`v60/preview-cafec-01.html`](v60/preview-cafec-01.html)
 - [`v60/preview-cafec-02.html`](v60/preview-cafec-02.html)
 
-Switch between the three designs, toggle the engraving, lift the lid with the slider,
-and turn on X-ray or the ghost paper stack (which includes the V60 tab).
+Switch between the designs, toggle the engraving, lift the lid with the slider, and
+turn on X-ray or the ghost paper stack (which includes the V60 tab). The **"Print
+these two"** panel always names the exact STL files (and magnet count) for what you're
+looking at, and "← All papers" returns to the index.
 
 ## Files
 
@@ -145,10 +148,11 @@ Everything runs inside Docker (`python:3-slim`) — no local Python needed, just
 Docker and make:
 
 ```bash
-make              # everything: STLs + previews + README images
-make generate     # STLs + interactive preview HTMLs
+make              # everything: STLs + previews + index + README images
+make generate     # STLs + preview HTMLs + index.html
 make docs         # README images (<folder>/docs/*.png)
-make vendor       # fetch the latest three.js module build into vendor/
+make vendor       # fetch the latest three.js build (two files) into vendor/
+make image        # (re)build the Docker build image only
 make clean        # delete all generated outputs
 ```
 
@@ -159,7 +163,7 @@ Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 
 | Parameter | Default | Meaning |
 |---|---|---|
-| `PAPERS` | 3 entries | the paper registry (side / angle / tab clearance) |
+| `PAPERS` | 5 entries | the paper registry (side / angle / tab clearance / designs) |
 | `DEPTH` | 42 mm | interior depth (≈ full 100-pack) |
 | `CLEAR_FRICTION` / `CLEAR_MAGNET` | 0.28 / 0.50 mm | lid clearance per side |
 | `POCKET_D` / `POCKET_DEPTH` | 6.4 / 3.2 mm | magnet pocket (for Ø6 × 3 magnets) |

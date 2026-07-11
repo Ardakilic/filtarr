@@ -15,16 +15,19 @@ License: dual — MIT for code (`LICENSE`), CC BY 4.0 for models/images
 ## Layout
 
 ```
-generate.py               shared engine: PAPERS registry + Case class + export/preview
-                          + build_index() -> index.html (Pages landing page)
-preview_template.html     template for the self-contained 3D previews
-Makefile / Dockerfile     canonical build path: everything runs in Docker
-tools/render_docs.py      README image renderer (matplotlib, loops all papers)
-tools/fetch_three.py      downloads latest three.module.min.js (stdlib only)
-vendor/three.module.min.js  three.js ES-module build (version in vendor/THREE_VERSION)
-HOWTO.md                  how to add a new paper variant (keep in sync with PAPERS)
-deep27/                   CAFEC Deep 27 outputs: stl/, docs/, preview.html
-v60/                      V60 outputs: 01, 02, cafec-01, cafec-02 (stl/, docs/, preview-*.html)
+generate.py                  shared engine: PAPERS registry + Case class + export/preview
+                             + build_index() -> index.html (Pages landing page)
+preview_template.html        template for the self-contained 3D previews
+Makefile / Dockerfile        canonical build path: everything runs in Docker
+.github/workflows/pages.yml  publishes the whole checkout to GitHub Pages on push to main
+tools/render_docs.py         README image renderer (matplotlib, loops all papers)
+tools/fetch_three.py         downloads latest three.module.min.js + three.core.min.js
+vendor/                      both three.js files + THREE_VERSION (committed)
+LICENSE / LICENSE-MODELS     MIT (code) / CC BY 4.0 (models & images)
+HOWTO.md                     how to add a new paper variant (keep in sync with PAPERS)
+index.html                   generated Pages landing page — never edit by hand
+deep27/                      CAFEC Deep 27 outputs: stl/, docs/, preview.html
+v60/                         V60 outputs: 01, 02, cafec-01, cafec-02 (stl/, docs/, preview-*.html)
 ```
 
 Per design: 3 STLs (base / lid / lid-engraved), named
@@ -40,9 +43,10 @@ fonts-liberation + pip requirements):
 
 ```bash
 make              # generate + docs
-make generate     # all papers -> stl + previews (builds image first)
+make generate     # all papers -> stl + previews + index.html (builds image first)
 make docs         # -> <folder>/docs/*.png
-make vendor       # refresh vendor/three.module.min.js to latest release
+make vendor       # refresh both three.js files in vendor/ to the latest release
+make image        # (re)build the filtarr-build Docker image only
 make clean        # delete generated outputs
 open deep27/preview.html   # interactive check (Safari is the only browser)
 ```
@@ -152,6 +156,18 @@ Engraving: `ENGRAVE_TEXT` = "Filtarr" (the project/brand name), 0.6 mm deep
 upright when the wedge TIP points at the reader (the `rotate(-90)` in
 `Case.text_geometry` encodes this). Don't "fix" it again without asking.
 
+## Adding a paper (checklist — details in HOWTO.md)
+
+1. Add a `PAPERS` entry in `generate.py`: `display`, `folder`, `side`, `angle`,
+   `tab_extra`, optional `designs` subset. Wedge angle from the dripper cone:
+   `180·sin(cone_angle/2)`.
+2. `make` — regenerates STLs, the paper's preview, index.html and docs images;
+   check the printed bounding boxes against the user's printer bed.
+3. Open the preview: ghost-paper toggle must show slack to every wall.
+4. Update README by hand: supported-papers table + gallery entry (renders image
+   + live preview link). index.html needs nothing — it's generated.
+5. Commit + push to `main` — Pages republishes automatically.
+
 ## Conventions & gotchas
 
 - `slot_cutter` profiles live in the (tangent, z) plane; frames are built
@@ -163,12 +179,19 @@ upright when the wedge TIP points at the reader (the `rotate(-90)` in
   *shape* only, never fine detail (use 2D plots or ray casts for that).
 - Builds are canonical through `make` (Docker); a scratch venv is only for dev
   verification (ray casts). `.venv` is gitignored.
-- Adding a paper: follow HOWTO.md; keep the README supported-papers table and
-  HOWTO.md in sync with `PAPERS`.
+- Previews carry an "← All papers" link hard-coded to `../index.html` — previews
+  must stay exactly one folder below the repo root or the link breaks.
+- Keep the README supported-papers table, README gallery and HOWTO.md in sync
+  with `PAPERS` (the Pages index syncs itself).
+- The Pages site was enabled once via
+  `gh api -X POST repos/Ardakilic/filtarr/pages -f build_type=workflow` — the
+  workflow token cannot create it (only deploy to it).
 
 ## User context
 
-- User: Arda (ardakilicdagi@gmail.com), open-sourcing this as "Filtarr" (MIT).
+- User: Arda (ardakilicdagi@gmail.com, GitHub `Ardakilic`); published as
+  "Filtarr", dual-licensed MIT (code) + CC BY 4.0 (models & images).
+- Previews confirmed working in his browser after the r167 core-split fix.
 - Print feedback pending: friction-fit tolerance, magnet snap strength, scoop width.
 - V60-02 parts are up to ~219 mm wide (needs a 220 bed); V60-01 up to ~187 mm —
   flag bed-size limits when relevant.
