@@ -19,6 +19,9 @@
         border-radius: 12px; padding: 14px 16px; backdrop-filter: blur(8px); }
   h1 { font-size: 15px; margin-bottom: 2px; }
   .sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+  #home { display: inline-block; color: var(--muted); text-decoration: none;
+          font-size: 12px; margin-bottom: 8px; }
+  #home:hover { color: var(--accent); }
   .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
   .tabs button { flex: 1; padding: 7px 2px; border-radius: 8px; cursor: pointer;
                  border: 1px solid var(--line); background: transparent;
@@ -53,6 +56,7 @@
 </head>
 <body>
 <div id="ui">
+  <a id="home" href="../index.html">&larr; All papers</a>
   <h1 id="title">Filtarr</h1>
   <div class="sub" id="subtitle">filter paper case</div>
   <div class="tabs" id="tabs"></div>
