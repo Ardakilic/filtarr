@@ -69,4 +69,5 @@ papers in, and confirm:
 - the tab (if any) doesn't touch the wall,
 - papers are easy to pick out.
 
-Then print the matching lid, and update the README's supported-papers table.
+Then print the matching lid, and update the README's supported-papers table and
+gallery (the index page updates itself).

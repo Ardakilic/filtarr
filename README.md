@@ -12,7 +12,9 @@ Open filter stands collect dust and kitchen odours; the original pouches are ann
 to use. Filtarr cases are two-piece wedge boxes: a tray that holds a full 100-pack
 lying flat, plus a lid.
 
-![Renders of all three designs](deep27/docs/renders.png)
+![CAFEC Deep 27 cases — all three designs](deep27/docs/renders.png)
+*CAFEC Deep 27 cases in all three designs — see the [gallery](#gallery) for the V60
+variants.*
 
 ## Supported papers
 
@@ -45,6 +47,28 @@ Shared features: finger scoop (telescoping designs) reaching to 8 mm above the f
 fully covered when closed; grip notches and a 3 mm exposed base rim so the telescoping
 halves separate easily; an alignment lip on the flat lid so it can't slide sideways;
 no supports needed in the exported print orientation.
+
+## Gallery
+
+**V60 size 01 (Hario / CAFEC)** — fits all brands, tab included —
+[interactive preview](https://ardakilic.github.io/filtarr/v60/preview-01.html)
+
+![V60 size 01 cases](v60/docs/renders-01.png)
+
+**V60 size 02 (Hario / CAFEC)** — fits all brands, tab included —
+[interactive preview](https://ardakilic.github.io/filtarr/v60/preview-02.html)
+
+![V60 size 02 cases](v60/docs/renders-02.png)
+
+**CAFEC cone cup 1, tabless** — compact, friction fit only —
+[interactive preview](https://ardakilic.github.io/filtarr/v60/preview-cafec-01.html)
+
+![CAFEC cone cup 1 case](v60/docs/renders-cafec-01.png)
+
+**CAFEC cone cup 4, tabless** — compact, friction fit only —
+[interactive preview](https://ardakilic.github.io/filtarr/v60/preview-cafec-02.html)
+
+![CAFEC cone cup 4 case](v60/docs/renders-cafec-02.png)
 
 ## The "Filtarr" engraving
 
