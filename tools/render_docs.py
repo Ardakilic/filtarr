@@ -64,7 +64,8 @@ def show(ax, meshes_cols, elev=25, azim=-55):
 
 GRAY, CREAM, STEEL = "#9aa2ad", "#efe3c8", "#dfe3e8"
 TITLES = {"friction": "Friction fit", "magnet-skirt": "Magnetic (skirt)",
-          "magnet-flat": "Magnetic (flat lid)"}
+          "magnet-flat": "Magnetic (flat lid)",
+          "magnet-pedestal": "Magnetic (pedestal)"}
 
 
 def lift(m, dz):
@@ -78,19 +79,21 @@ def suffix_for(g, case):
 
 
 def render_grid(g, case, out_path):
-    paper = case.paper_ghost()
     n = len(case.designs)
     fig = plt.figure(figsize=(5 * n, 9), dpi=130)
     for col, design in enumerate(case.designs):
+        pedestal = design == "magnet-pedestal"
         base = case.build_base(design)
         lid = case.build_lid(design)
+        paper = case.paper_ghost(g.PEDESTAL_H if pedestal else 0.0)
         color = g.LID_COLORS[design]
         closed = [(base, GRAY), (lid, color)]
         lifted = [(base, GRAY), (paper, CREAM), (lift(lid, 70), color)]
         if design.startswith("magnet"):
             centres = (case.magnets_skirt if design == "magnet-skirt"
                        else case.magnets_flat)
-            mb, ml = case.magnet_ghosts(centres)
+            mb, ml = case.magnet_ghosts(
+                centres, case.base_h_ped if pedestal else None)
             lifted += [(mb, STEEL), (lift(ml, 70), STEEL)]
         ax = fig.add_subplot(2, n, col + 1, projection="3d")
         show(ax, closed)

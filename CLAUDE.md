@@ -32,9 +32,10 @@ v60/                         V60 outputs: 01, 02, cafec-01, cafec-02 (stl/, docs
 
 Per design: 3 STLs (base / lid / lid-engraved), named
 `<paper>-case-<design>-<part>.stl`. Design keys: `friction | magnet-skirt |
-magnet-flat` (also the preview tab keys). A PAPERS entry may restrict designs
-via `"designs": (...)`; currently all five papers ship all three designs (the
-CAFEC entries were friction-only briefly — the user asked for all three).
+magnet-flat | magnet-pedestal` (also the preview tab keys). A PAPERS entry may
+restrict designs via `"designs": (...)`; currently all five papers ship all
+four designs (the CAFEC entries were friction-only briefly — the user asked
+for all of them).
 
 ## Commands
 
@@ -78,7 +79,7 @@ For dev-only verification (ray casts need rtree+scipy, not in requirements.txt):
   Docker image's metric-compatible Arial substitute — the canonical output) →
   regular weights. Gotcha: `FontProperties(family="sans-serif")` must be
   `family=["sans-serif"]` (a bare string is parsed as a fontconfig pattern → crash).
-- **Previews are fully self-contained** (~4–9 MB each): the latest three.js
+- **Previews are fully self-contained** (~8–12 MB each): the latest three.js
   **ES-module** build (UMD was dropped after r160) is base64-embedded in
   `<script type="text/plain">` blocks and loaded at runtime via **blob dynamic
   imports** — no import maps, works offline from `file://` in Safari/Chrome/
@@ -136,7 +137,7 @@ Cone with full apex angle A → flat sector `360·sin(A/2)`° → folded wedge
   Papers fluff up after opening; keep generous slack (V60 community lesson: boxes
   repeatedly had to be rescaled).
 
-## Design map (3 designs × plain/engraved lid = 6 variants per paper)
+## Design map (4 designs × plain/engraved lid = 8 variants per paper)
 
 Shared: interior = paper angle + 3° slack, R_INT = side + rounded-apex offset
 (`apex_tip_x`) + 3.5 slack + tab_extra; interior depth = per-paper `depth`
@@ -154,6 +155,19 @@ corners filleted r4 via `buffer(-r).buffer(r)`.
   in smoothly blended corner bulges (apex + both wide-end corners; centres found by
   `Case._step_out` marching until the pocket clears the interior). No scoop (the
   whole top opens) — instead a 20 × 2.2 mm pry slot under the lid edge mid-arc.
+- **magnet-pedestal**: magnet-flat shell + easy paper picking. Added 2026-07-12
+  after the user found flat-lid picking hard; he chose it over a bay-only fix
+  because tabbed Hario papers make press-and-slide unreliable (researched:
+  combines the Hario paper stand's minimal-contact floor with the Yamazaki
+  Tosca's closed-rim recess). Full-height finger bay bulged outward mid-arc
+  (`BAY_W` 34 × `BAY_D` 12, box∪interior smoothed by the `CORNER_BLEND_R`
+  closing; the rim stays closed → dust-proof; the pry slot moves to the bay's
+  front face, still backed by the lip) + pedestal floor (`PEDESTAL_H` 8)
+  stopping `MOAT_W` 15 + tab_extra short of the arc wall, so every brand's
+  paper edge (and the Hario tab) overhangs the moat — one sheet is pinched
+  from below, down to the last paper. The interior is deepened by PEDESTAL_H,
+  so headroom stays = per-paper depth (never squeezed) and the closed box is
+  8 mm taller. Base is diff-then-union: cavity cut first, plinth unioned after.
 
 Magnets: Ø6 × 3 mm discs (user owns these), pockets Ø6.4 × 3.2 → ~0.2 mm recess per
 side so pairs never touch (controlled snap, one-hand open). Polarity is set at glue
@@ -204,6 +218,7 @@ upright when the wedge TIP points at the reader (the `rotate(-90)` in
   "Filtarr", dual-licensed MIT (code) + CC BY 4.0 (models & images).
 - Previews confirmed working in his browser after the r167 core-split fix.
 - Print feedback pending: friction-fit tolerance, magnet snap strength, scoop width.
-- Widest parts per paper: V60-02 ~219 mm (needs a 220 bed), CAFEC cup 4 ~207 mm,
-  V60-01 ~187 mm, CAFEC cup 1 ~176 mm, Deep 27 ~172 mm — flag bed-size limits
-  when relevant.
+- Widest parts per paper (the pedestal design is always the largest): V60-02
+  ~219 mm (needs a 220 bed), CAFEC cup 4 ~207 mm, V60-01 ~187 mm, CAFEC cup 1
+  ~177 mm, Deep 27 ~182 mm (pedestal base; its other designs stay ~172, so only
+  Deep 27's pedestal outgrows a 180 bed) — flag bed-size limits when relevant.

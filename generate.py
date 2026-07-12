@@ -3,18 +3,24 @@
 Filtarr — parametric storage cases for pour-over paper filters.
 
 Generates print-ready STLs for two-piece, dust-proof wedge boxes that hold
-flat cone filter papers, for every paper in the PAPERS registry and in three
+flat cone filter papers, for every paper in the PAPERS registry and in four
 case designs:
 
-  * friction     — "chocolate box" full-cover telescoping lid, snug fit
-  * magnet-skirt — same telescoping lid with a loose glide fit, closed by
-                   4 pairs of 6 x 3 mm disc magnets in outward wall lobes
-  * magnet-flat  — flat lay-on lid with a small alignment lip; 3 magnet
-                   pairs live in enlarged corners (apex + both wide-end
-                   corners), MAG-BOX style
+  * friction        — "chocolate box" full-cover telescoping lid, snug fit
+  * magnet-skirt    — same telescoping lid with a loose glide fit, closed by
+                      4 pairs of 6 x 3 mm disc magnets in outward wall lobes
+  * magnet-flat     — flat lay-on lid with a small alignment lip; 3 magnet
+                      pairs live in enlarged corners (apex + both wide-end
+                      corners), MAG-BOX style
+  * magnet-pedestal — magnet-flat shell + easy paper picking: a full-height
+                      finger bay bulges outward mid-arc and the papers rest
+                      on a pedestal floor whose edge stops short of the arc
+                      wall, so single sheets are pinched from below via the
+                      bay — the rim stays closed (dust-proof) and the box
+                      grows PEDESTAL_H taller to keep full stack headroom
 
 Each design's lid also comes in an engraved version (ENGRAVE_TEXT on the
-top face), giving 6 printable variants per paper from 9 STLs (bases are
+top face), giving 8 printable variants per paper from 12 STLs (bases are
 shared between the plain and engraved variants):
 
   <folder>/stl/<paper>-case-<design>-base.stl
@@ -54,7 +60,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # tab_extra extra radial clearance, mm, for the round hanging tab some brands
 #           put on the arc edge (position varies by brand — radial clearance
 #           covers every position, so one box fits all brands)
-# designs   optional: subset of DESIGNS to generate (default: all three)
+# designs   optional: subset of DESIGNS to generate (default: all four)
 # depth     optional: interior depth override, mm (default DEPTH). Size it so a
 #           loose 100-pack drops in without squeezing: smooth Hario paper
 #           stacks ~32 mm/100, creped CAFEC paper ≈ its pouch thickness
@@ -151,9 +157,20 @@ MAG_SIDE_FRAC = 0.60     # straight-side magnet position, × R_INT
 LIP_CLEAR = 0.5          # alignment lip clearance to the interior wall
 LIP_T = 1.8              # alignment lip thickness
 LIP_H = 2.5              # how far the lip descends into the opening
-CORNER_BLEND_R = 6.0     # smoothing radius blending corner bulges into walls
+CORNER_BLEND_R = 6.0     # smoothing radius blending bulges / the bay into walls
 PRY_W = 20.0             # pry slot under the lid edge, mid-arc
 PRY_H = 2.2
+
+# magnet-pedestal design: magnet-flat shell + easy paper picking. A finger bay
+# bulges outward mid-arc (full height, rim stays closed -> still dust-proof)
+# and the pedestal the papers rest on stops MOAT_W (+ tab_extra) short of the
+# arc wall — every brand's paper edge overhangs the moat, so one sheet can be
+# pinched from below via the bay, down to the very last paper. The interior is
+# deepened by PEDESTAL_H so the 100-pack keeps full headroom (never squeezed).
+BAY_W = 34.0             # bay opening width along the wide-end arc
+BAY_D = 12.0             # bay depth outward beyond the interior wall
+PEDESTAL_H = 8.0         # pedestal height — enough to get a fingertip under
+MOAT_W = 15.0            # pedestal setback from the arc wall (+ tab_extra)
 
 # Engraving (lid top face). Upright when the tip of the wedge points at you.
 ENGRAVE_TEXT = "Filtarr"
@@ -175,7 +192,7 @@ FONT_CANDIDATES = [
 PREVIEW_STACK_H = 26.0
 
 QS = 24  # quad segments for shapely buffers (arc smoothness)
-DESIGNS = ("friction", "magnet-skirt", "magnet-flat")
+DESIGNS = ("friction", "magnet-skirt", "magnet-flat", "magnet-pedestal")
 
 # --------------------------------------------------------------------------
 # STATELESS MESH HELPERS
@@ -290,6 +307,39 @@ class Case:
             .buffer(-CORNER_BLEND_R, quad_segs=QS)
         )
 
+        # magnet-pedestal: the interior gains the outward finger bay mid-arc
+        # (the wall follows at constant thickness, so the rim stays closed) and
+        # the pedestal floor stops MOAT_W + tab_extra short of the arc wall,
+        # guaranteeing the same paper-edge overhang for tabbed and tabless brands
+        self.base_h_ped = self.base_h + PEDESTAL_H
+        bay = (
+            shp_box(self.r_int - 6.0, -BAY_W / 2.0,
+                    self.r_int + BAY_D, BAY_W / 2.0)
+            .buffer(-CORNER_BLEND_R, quad_segs=QS)
+            .buffer(CORNER_BLEND_R, quad_segs=QS)
+        )
+        self.interior_ped = (
+            self.interior.union(bay)
+            .buffer(CORNER_BLEND_R, quad_segs=QS)
+            .buffer(-CORNER_BLEND_R, quad_segs=QS)
+        )
+        self.ext_ped = (
+            unary_union(
+                [self.interior_ped.buffer(WALL_T, quad_segs=QS)]
+                + [Point(c).buffer(POCKET_D / 2.0 + 1.6, quad_segs=QS)
+                   for c in self.magnets_flat]
+            )
+            .buffer(CORNER_BLEND_R, quad_segs=QS)
+            .buffer(-CORNER_BLEND_R, quad_segs=QS)
+        )
+        self.plinth = (
+            self.interior.intersection(
+                Point(0.0, 0.0).buffer(
+                    self.r_int - MOAT_W - cfg["tab_extra"], quad_segs=QS))
+            .buffer(-2.0, quad_segs=QS)
+            .buffer(2.0, quad_segs=QS)
+        )
+
     # -- magnet layouts ------------------------------------------------------
 
     def _skirt_magnet_centres(self):
@@ -348,10 +398,11 @@ class Case:
                             (px, py), nrm_deg, 24.0))
         return out
 
-    def pry_cutter(self):
-        """Shallow slot under the flat lid's edge, mid-arc: thumbnail pry point."""
-        return slot_cutter(PRY_W, self.base_h - PRY_H, self.base_h + 5.0, 2.0,
-                           (self.r_int, 0.0), 0.0, 30.0)
+    def pry_cutter(self, cx, top):
+        """Shallow slot under a flat lid's edge, mid-arc: thumbnail pry point
+        (the lid's lip still backs it, so no dust path opens up)."""
+        return slot_cutter(PRY_W, top - PRY_H, top + 5.0, 2.0,
+                           (cx, 0.0), 0.0, 30.0)
 
     # -- engraving ---------------------------------------------------------------
 
@@ -405,10 +456,23 @@ class Case:
             solid = prism(self.ext_skirt, 0.0, self.base_h)
             cutters = [self.scoop_cutter()] + pocket_cutters(
                 self.magnets_skirt, self.base_h - POCKET_DEPTH, self.base_h + 1.0)
-        else:  # magnet-flat: no through-scoop (the whole top opens), pry slot instead
+        elif design == "magnet-flat":  # no through-scoop (the whole top opens)
             solid = prism(self.ext_flat, 0.0, self.base_h)
-            cutters = [self.pry_cutter()] + pocket_cutters(
+            cutters = [self.pry_cutter(self.r_int, self.base_h)] + pocket_cutters(
                 self.magnets_flat, self.base_h - POCKET_DEPTH, self.base_h + 1.0)
+        else:  # magnet-pedestal: papers picked via the finger bay + moat
+            solid = prism(self.ext_ped, 0.0, self.base_h_ped)
+            cutters = [self.pry_cutter(self.r_int + BAY_D, self.base_h_ped)]
+            cutters += pocket_cutters(self.magnets_flat,
+                                      self.base_h_ped - POCKET_DEPTH,
+                                      self.base_h_ped + 1.0)
+            cutters.append(prism(self.interior_ped, FLOOR_T,
+                                 self.base_h_ped + 1.0))
+            tray = diff(solid, *cutters)
+            # pedestal added after the cavity cut; the moat keeps floor level
+            return trimesh.boolean.union(
+                [tray, prism(self.plinth, FLOOR_T - 1.0, FLOOR_T + PEDESTAL_H)],
+                check_volume=False)
         cutters.append(prism(self.interior, FLOOR_T, self.base_h + 1.0))
         return diff(solid, *cutters)
 
@@ -422,41 +486,49 @@ class Case:
         else:
             plate_t = LID_T_MAGNET
 
-        if design == "magnet-flat":
-            plate = prism(self.ext_flat, self.base_h, self.base_h + plate_t)
+        if design in ("magnet-flat", "magnet-pedestal"):
+            outline, cavity, top = (
+                (self.ext_flat, self.interior, self.base_h)
+                if design == "magnet-flat"
+                else (self.ext_ped, self.interior_ped, self.base_h_ped))
+            plate = prism(outline, top, top + plate_t)
             lip = prism(
-                self.interior.buffer(-LIP_CLEAR, quad_segs=QS).difference(
-                    self.interior.buffer(-(LIP_CLEAR + LIP_T), quad_segs=QS)),
-                self.base_h - LIP_H, self.base_h + 0.5)
+                cavity.buffer(-LIP_CLEAR, quad_segs=QS).difference(
+                    cavity.buffer(-(LIP_CLEAR + LIP_T), quad_segs=QS)),
+                top - LIP_H, top + 0.5)
             solid = trimesh.boolean.union([plate, lip], check_volume=False)
-            cutters = pocket_cutters(self.magnets_flat, self.base_h - 1.0,
-                                     self.base_h + POCKET_DEPTH)
+            cutters = pocket_cutters(self.magnets_flat, top - 1.0,
+                                     top + POCKET_DEPTH)
         else:
+            top = self.base_h
             outer = inner.buffer(SKIRT_T, quad_segs=QS)
-            solid = prism(outer, PLINTH, self.base_h + plate_t)
-            cutters = [prism(inner, PLINTH - 1.0, self.base_h)] + self.notch_cutters()
+            solid = prism(outer, PLINTH, top + plate_t)
+            cutters = [prism(inner, PLINTH - 1.0, top)] + self.notch_cutters()
             if design == "magnet-skirt":
                 # pockets rise into the lid plate from its underside
-                cutters += pocket_cutters(self.magnets_skirt, self.base_h - 1.0,
-                                          self.base_h + POCKET_DEPTH)
+                cutters += pocket_cutters(self.magnets_skirt, top - 1.0,
+                                          top + POCKET_DEPTH)
         if engraved:
-            cutters += self.engrave_cutters(self.base_h + plate_t)
+            cutters += self.engrave_cutters(top + plate_t)
         return diff(solid, *cutters)
 
     # -- preview-only ghosts --------------------------------------------------
 
-    def paper_ghost(self):
+    def paper_ghost(self, lift=0.0):
+        """Ghost paper stack; `lift` raises it onto the pedestal design's floor."""
         poly = sector_poly(self.angle, self.side)
         if self.cfg["tab_extra"] > 0.0:
             poly = poly.union(Point(self.side - 2.0, 0.0).buffer(7.5, quad_segs=QS))
         poly = affinity.translate(poly, xoff=self.apex_tip_x + 1.5)
-        return prism(poly, FLOOR_T + 0.3, FLOOR_T + 0.3 + PREVIEW_STACK_H)
+        return prism(poly, FLOOR_T + lift + 0.3,
+                     FLOOR_T + lift + 0.3 + PREVIEW_STACK_H)
 
-    def magnet_ghosts(self, centres):
+    def magnet_ghosts(self, centres, top=None):
+        top = self.base_h if top is None else top
         base_m, lid_m = [], []
         for cx, cy in centres:
-            for bucket, z in ((base_m, self.base_h - POCKET_DEPTH + 0.1),
-                              (lid_m, self.base_h + 0.1)):
+            for bucket, z in ((base_m, top - POCKET_DEPTH + 0.1),
+                              (lid_m, top + 0.1)):
                 c = trimesh.creation.cylinder(radius=3.0, height=3.0, sections=48)
                 c.apply_translation([cx, cy, z + 1.5])
                 bucket.append(c)
@@ -528,13 +600,16 @@ def b64stl(mesh):
 
 
 LID_COLORS = {"friction": "#2f8f83", "magnet-skirt": "#b3634f",
-              "magnet-flat": "#4f7cb3"}
+              "magnet-flat": "#4f7cb3", "magnet-pedestal": "#8a5fb3"}
 
 
 def build_preview(case, parts_world):
-    ghost_paper = b64stl(case.paper_ghost())
+    ghosts = {0.0: b64stl(case.paper_ghost())}
+    if "magnet-pedestal" in case.designs:
+        ghosts[PEDESTAL_H] = b64stl(case.paper_ghost(PEDESTAL_H))
     variants = {}
     for design in case.designs:
+        lift = PEDESTAL_H if design == "magnet-pedestal" else 0.0
         parts = [
             {"name": "base", "attach": "base", "color": "#8a8f98",
              "stl": b64stl(parts_world[f"{design}-base"])},
@@ -543,12 +618,14 @@ def build_preview(case, parts_world):
             {"name": "lid-engraved", "attach": "lid", "color": LID_COLORS[design],
              "stl": b64stl(parts_world[f"{design}-lid-engraved"])},
             {"name": "papers", "attach": "base", "color": "#efe3c8",
-             "opacity": 0.55, "stl": ghost_paper},
+             "opacity": 0.55, "stl": ghosts[lift]},
         ]
         if design != "friction":
             centres = (case.magnets_skirt if design == "magnet-skirt"
                        else case.magnets_flat)
-            mb, ml = case.magnet_ghosts(centres)
+            mb, ml = case.magnet_ghosts(
+                centres,
+                case.base_h_ped if design == "magnet-pedestal" else None)
             parts += [
                 {"name": "magnets", "attach": "base", "color": "#d7dade",
                  "metal": True, "stl": b64stl(mb)},
@@ -558,19 +635,25 @@ def build_preview(case, parts_world):
         variants[design] = parts
 
     has_magnets = any(d.startswith("magnet") for d in case.designs)
+    has_pedestal = "magnet-pedestal" in case.designs
     heights = [f"{case.base_h + LID_T_FRICTION:.0f} mm (friction)"]
     if has_magnets:
         heights.append(f"{case.base_h + LID_T_MAGNET:.0f} mm (magnet)")
+    if has_pedestal:
+        heights.append(f"{case.base_h_ped + LID_T_MAGNET:.0f} mm (pedestal)")
+    depth_txt = f"{case.depth:.0f} mm deep"
+    if has_pedestal:
+        depth_txt += f" ({case.depth + PEDESTAL_H:.0f} pedestal)"
     dims = {
         "paper": f"{case.side:.0f} mm side, {case.angle:.0f}° wedge",
         "interior": f"{case.r_int - case.apex_tip_x:.0f} mm x "
-                    f"{case.int_angle:.0f}°, {case.depth:.0f} mm deep",
+                    f"{case.int_angle:.0f}°, {depth_txt}",
         "closedH": " / ".join(heights),
     }
     if has_magnets:
-        dims["magnets"] = (f"Ø6x3 mm discs — skirt: 8, flat: 6; "
+        dims["magnets"] = (f"Ø6x3 mm discs — skirt: 8, flat/pedestal: 6; "
                            f"pockets {POCKET_D:.1f} x {POCKET_DEPTH:.1f} mm")
-    mag_counts = {"magnet-skirt": 8, "magnet-flat": 6}
+    mag_counts = {"magnet-skirt": 8, "magnet-flat": 6, "magnet-pedestal": 6}
     data = {
         "title": f"Filtarr — {case.cfg['display']}",
         "variants": variants,

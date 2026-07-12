@@ -2,7 +2,7 @@
 
 3D-printable, dust-proof storage boxes for **pour-over paper filters** — currently
 five papers (CAFEC Deep 27, Hario/CAFEC V60 sizes 01 & 02, and compact tabless CAFEC
-cone variants) in three case designs, each with an optional engraved lid. Everything
+cone variants) in four case designs, each with an optional engraved lid. Everything
 is generated from one parametric Python script; adding a new paper is one registry
 entry ([HOWTO](HOWTO.md)).
 
@@ -13,19 +13,19 @@ Open filter stands collect dust and kitchen odours; the original pouches are ann
 to use. Filtarr cases are two-piece wedge boxes: a tray that holds a full 100-pack
 lying flat, plus a lid.
 
-![CAFEC Deep 27 cases — all three designs](deep27/docs/renders.png)
-*CAFEC Deep 27 cases in all three designs — see the [gallery](#gallery) for the V60
+![CAFEC Deep 27 cases — all four designs](deep27/docs/renders.png)
+*CAFEC Deep 27 cases in all four designs — see the [gallery](#gallery) for the V60
 variants.*
 
 ## Supported papers
 
 | Paper | Flat geometry | Designs | Largest part |
 |---|---|---|---|
-| CAFEC Deep 27 (Abaca+) — [`deep27/`](deep27/) | 42° wedge, 155 mm side, no tab | all 3 | 172 × 142 mm |
-| V60 size 01 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤107 mm seam edge + tab | all 3 | 128 × 187 mm |
-| V60 size 02 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤128 mm seam edge + tab | all 3 | 150 × 219 mm |
-| CAFEC cone cup 1, tabless — [`v60/`](v60/) | 90° wedge, 106 mm seam edge, no tab | all 3 | 121 × 176 mm |
-| CAFEC cone cup 4, tabless — [`v60/`](v60/) | 90° wedge, 127 mm seam edge, no tab | all 3 | 142 × 207 mm |
+| CAFEC Deep 27 (Abaca+) — [`deep27/`](deep27/) | 42° wedge, 155 mm side, no tab | all 4 | 182 × 142 mm |
+| V60 size 01 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤107 mm seam edge + tab | all 4 | 140 × 187 mm |
+| V60 size 02 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤128 mm seam edge + tab | all 4 | 162 × 219 mm |
+| CAFEC cone cup 1, tabless — [`v60/`](v60/) | 90° wedge, 106 mm seam edge, no tab | all 4 | 133 × 177 mm |
+| CAFEC cone cup 4, tabless — [`v60/`](v60/) | 90° wedge, 127 mm seam edge, no tab | all 4 | 154 × 207 mm |
 
 The V60 boxes add radial clearance for the little **hanging tab** on the arc edge;
 since its position varies by brand (Hario, CAFEC, generics), the whole interior is
@@ -38,22 +38,33 @@ are sized per paper from measured stack heights: smooth Hario paper stacks ~32 m
 per 100, so those cases are 42 mm deep; creped CAFEC paper barely compresses (a
 100-stack stays close to its 40–50 mm pouch thickness), so Deep 27 and cup 1 get
 47 mm and cup 4 gets 54 mm, with headroom because papers fluff up once opened.
+The pedestal design adds its 8 mm pedestal *on top* of these depths, so its box is
+8 mm taller and the headroom is unchanged.
 Tip: the crimped seam makes a stack lean taller on one side — flipping half the
 papers upside down balances the pile (the wedge is symmetric).
 
-## The three designs
+## The four designs
 
-| | Friction fit | Magnetic (skirt) | Magnetic (flat lid) |
-|---|---|---|---|
-| Lid style | full-cover telescoping lid | full-cover telescoping lid | flat lay-on lid, MAG-BOX style |
-| Closure | snug fit (0.28 mm/side) | loose glide + 4 magnet pairs | 3 magnet pairs in the corners |
-| Magnets needed | none | 8× Ø6 × 3 mm | 6× Ø6 × 3 mm |
-| Paper access | finger scoop in the wide-end wall | finger scoop in the wide-end wall | whole top opens; pry slot under the lid edge |
-| Character | no hardware at all | most dust-proof magnetic option | simplest, lightest lid, one-hand open |
+| | Friction fit | Magnetic (skirt) | Magnetic (flat lid) | Magnetic (pedestal) |
+|---|---|---|---|---|
+| Lid style | full-cover telescoping lid | full-cover telescoping lid | flat lay-on lid, MAG-BOX style | flat lay-on lid, MAG-BOX style |
+| Closure | snug fit (0.28 mm/side) | loose glide + 4 magnet pairs | 3 magnet pairs in the corners | 3 magnet pairs in the corners |
+| Magnets needed | none | 8× Ø6 × 3 mm | 6× Ø6 × 3 mm | 6× Ø6 × 3 mm |
+| Paper access | finger scoop in the wide-end wall | finger scoop in the wide-end wall | whole top opens; pry slot under the lid edge | finger bay + moat: pinch one sheet from under its edge |
+| Character | no hardware at all | most dust-proof magnetic option | simplest, lightest lid, one-hand open | easiest paper picking, 8 mm taller |
+
+**Why the pedestal design?** With a flat lid the whole top opens, but sliding a single
+sheet off a deep tray wall is fiddly — and papers with a hanging tab (Hario) make a
+wall cutout unreliable. In the pedestal design the stack rests on an 8 mm pedestal
+that stops 15 mm (plus the tab clearance) short of the arc wall, so every brand's
+paper edge — tab included — overhangs a moat. A full-height finger bay bulges
+*outward* mid-arc, keeping the rim closed and the box dust-proof, and lets you reach
+under the overhanging edge and pinch out one sheet, down to the very last paper. The
+interior is 8 mm deeper, so the 100-pack keeps its full never-squeezed headroom.
 
 Shared features: finger scoop (telescoping designs) reaching to 8 mm above the floor,
 fully covered when closed; grip notches and a 3 mm exposed base rim so the telescoping
-halves separate easily; an alignment lip on the flat lid so it can't slide sideways;
+halves separate easily; an alignment lip on the flat lids so they can't slide sideways;
 no supports needed in the exported print orientation.
 
 ## Gallery
@@ -112,14 +123,17 @@ the same design:
 <folder>/stl/<paper>-case-friction-{base,lid,lid-engraved}.stl
 <folder>/stl/<paper>-case-magnet-skirt-{base,lid,lid-engraved}.stl
 <folder>/stl/<paper>-case-magnet-flat-{base,lid,lid-engraved}.stl
+<folder>/stl/<paper>-case-magnet-pedestal-{base,lid,lid-engraved}.stl
 ```
 
 ## Printing
 
-- **Bed size**: see the supported-papers table. Deep 27 and CAFEC cup 1 fit
-  180 × 180 mm beds; V60-01 needs ~190 mm in one axis (its friction design fits 180);
-  CAFEC cup 4 needs ~200 mm (friction/skirt) to ~210 mm (flat lid); the all-brands
-  V60-02 needs a 220 mm bed.
+- **Bed size**: see the supported-papers table — the "Largest part" is always the
+  pedestal design (its finger bay adds ~12 mm in one axis). Deep 27 and CAFEC cup 1
+  fit 180 × 180 mm beds, except the Deep 27 pedestal base at 182 mm; V60-01 needs
+  ~190 mm in one axis (its friction design fits 180); CAFEC cup 4 needs ~200 mm
+  (friction/skirt) to ~210 mm (flat/pedestal); the all-brands V60-02 needs a 220 mm
+  bed.
 - **Material**: PLA or PETG, 0.4 mm nozzle, 0.2 mm layers, 3 perimeters, 10–15 % infill.
 - **Warping**: large flat parts — use a brim or good bed adhesion, especially PETG.
 - No supports. Lids print top-face-down: smooth first-layer finish, crisp engraving,
@@ -131,11 +145,11 @@ Printers vary. If the friction lid is too tight or too loose, either scale the *
 only** by ∓0.2 % in XY in your slicer, or change `CLEAR_FRICTION` in `generate.py` and
 regenerate. Both magnetic designs are tolerance-forgiving by design.
 
-## Magnet assembly (both magnetic designs)
+## Magnet assembly (all magnetic designs)
 
 Magnets: **Ø6 mm × 3 mm** discs (N35 or stronger) — 8 for the skirt design, 6 for the
-flat design. Pockets are Ø6.4 × 3.2 mm, so each magnet sits ~0.2 mm recessed — facing
-pairs never touch, giving a gentle snap that opens with one hand.
+flat and pedestal designs. Pockets are Ø6.4 × 3.2 mm, so each magnet sits ~0.2 mm
+recessed — facing pairs never touch, giving a gentle snap that opens with one hand.
 
 Get the polarity right on the first try:
 
@@ -174,7 +188,9 @@ Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 | `CLEAR_FRICTION` / `CLEAR_MAGNET` | 0.28 / 0.50 mm | lid clearance per side |
 | `POCKET_D` / `POCKET_DEPTH` | 6.4 / 3.2 mm | magnet pocket (for Ø6 × 3 magnets) |
 | `ENGRAVE_TEXT` / `ENGRAVE_WIDTH` / `ENGRAVE_DEPTH` | "Filtarr" / 60 / 0.6 mm | lid engraving |
-| `SCOOP_W` | 36 mm | finger scoop width |
+| `SCOOP_W` | 36 mm | finger scoop width (telescoping designs) |
+| `PEDESTAL_H` / `MOAT_W` | 8 / 15 mm | pedestal design: pedestal height / moat width (+ tab clearance) |
+| `BAY_W` / `BAY_D` | 34 / 12 mm | pedestal design: finger bay opening width / outward depth |
 
 The engraving font comes from `FONT_CANDIDATES`: Arial Bold where available, and
 Liberation Sans Bold (the metric-compatible Arial substitute installed in the Docker
@@ -210,9 +226,11 @@ dust/odour (r/pourover consensus), finger cutouts at the paper edge
 flat lids (the classic MAG-BOX pattern), glued 6 mm disc magnets in recesses
 ([AeroPress filter holder](https://www.printables.com/model/814937-aeropress-filter-holder)),
 and generous cavity margins — V60 boxes repeatedly needed scaling because paper sizes
-vary between brands and batches. Possible future ideas: a lifting platform for the last
-few papers ([AeroPress filter case](https://www.printables.com/model/307459-aeropress-filter-case)),
-a sloped floor, a wall-mount plate.
+vary between brands and batches. The pedestal design combines two tricks from
+commercial cases: a minimal-contact floor that lets paper edges overhang (Hario's
+[V60 paper stand](https://www.hario-usa.com/products/v60-paper-stand-white)) and a
+closed-rim finger recess (Yamazaki's Tosca filter case). Possible future ideas: a
+wall-mount plate, a slimmer 40-pack travel size.
 
 ## License
 
