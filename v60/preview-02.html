@@ -48,6 +48,9 @@
   #parts b { color: var(--accent); font-size: 12px; }
   #parts .file { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
                  font-size: 10.5px; word-break: break-all; margin: 4px 0; }
+  #parts .file a { color: var(--ink); text-decoration: underline;
+                   text-decoration-color: var(--line); }
+  #parts .file a:hover { color: var(--accent); }
   #parts .need { color: var(--muted); font-size: 11.5px; margin-top: 5px; }
   @media (max-width: 640px) {
     #ui { width: 210px; } #dims { display: none; } #hint { display: none; }
@@ -65,7 +68,7 @@
     <input id="explode" type="range" min="0" max="120" value="0" step="1">
   </div>
   <label class="row"><input id="show-lid" type="checkbox" checked> Show lid</label>
-  <label class="row"><input id="engrave" type="checkbox"> "Filtarr" engraving</label>
+  <label class="row"><input id="engrave" type="checkbox" checked> "Filtarr" engraving</label>
   <label class="row"><input id="xray-lid" type="checkbox"> X-ray lid</label>
   <label class="row"><input id="show-papers" type="checkbox" checked> Ghost paper stack</label>
   <label class="row"><input id="spin" type="checkbox" checked> Auto-rotate</label>
@@ -278,9 +281,9 @@ function main(THREE) {
     }
     const pr = DATA.print && DATA.print[active];
     if (pr) {
+      const link = f => `<div class="file"><a href="${f}" download>${f}</a></div>`;
       $("parts").innerHTML = "<b>Print these two</b>" +
-        `<div class="file">${pr.base}</div>` +
-        `<div class="file">${engraved ? pr.lid_engraved : pr.lid}</div>` +
+        link(pr.base) + link(engraved ? pr.lid_engraved : pr.lid) +
         (pr.magnets ? `<div class="need">plus ${pr.magnets}</div>` : "");
     }
   }

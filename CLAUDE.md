@@ -95,8 +95,9 @@ For dev-only verification (ray casts need rtree+scipy, not in requirements.txt):
   intensities. Template placeholders: `/*__THREE_B64__*/`,
   `/*__THREE_CORE_B64__*/`, `/*__DATA__*/null`; title/subtitle via `DATA.title`;
   variant tabs are built dynamically from `DATA.variants` keys (papers can have a
-  designs subset); `DATA.print` drives the "Print these two" panel that names the
-  STL files (+ magnet count) for the selected variant and engraving toggle.
+  designs subset); `DATA.print` drives the "Print these two" panel — download
+  links to the exact STL files (+ magnet count) for the selected variant and
+  engraving toggle (engraving is ON by default).
   Smoke-test embedded payloads without a browser: extract both b64 blocks from a
   generated preview, write them side by side, `node -e "import('./three.module.min.js')"`.
 - **Verification without a browser/GPU** (no headless Chrome for screenshots):
