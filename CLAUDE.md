@@ -115,7 +115,15 @@ Cone with full apex angle A → flat sector `360·sin(A/2)`° → folded wedge
 
 - **Deep 27**: 27° cone → 42.02° wedge (photo-confirmed 42.7°±1°). Side 155 mm
   (user-measured), arc wide end R≈155 about the tip, ~8 mm crimp seam on one edge,
-  **no tab**. 100-pack pouch 205×160×40 mm → loose stack 30–40 mm → `DEPTH = 42`.
+  **no tab**. 100-pack pouch 205×160×40 mm ≈ the true free stack → depth 47.
+- **100-pack stack heights** (researched; drive per-paper `depth`, user rule:
+  papers must never be squeezed): single ply 206–210 µm (coffeeadastra caliper
+  data), folded filter = 2 plies. Smooth Hario paper nests when stacked:
+  ~32 mm/100 measured → depth 42 (default). CAFEC one-sided crepe does NOT nest:
+  a 100-stack ≈ its pouch thickness — Deep 27 & cup 1 pouches 40 mm → depth 47;
+  cup 4 pouch 50 mm → depth 54. The crimp seam lofts one side; flipping half the
+  stack balances it (wedge is symmetric — README tip). Footprints/bed sizes are
+  unaffected by depth.
 - **V60 01/02**: 60° cone → 90° wedge. Hario official flat sheet specs: 02 =
   125 × 125 mm (measured up to 125 × 128), 01 = 100 × 100 mm (measured up to
   105 × 107) — the user's Amazon-style image claiming 120/100 mm seam edges was
@@ -131,8 +139,9 @@ Cone with full apex angle A → flat sector `360·sin(A/2)`° → folded wedge
 ## Design map (3 designs × plain/engraved lid = 6 variants per paper)
 
 Shared: interior = paper angle + 3° slack, R_INT = side + rounded-apex offset
-(`apex_tip_x`) + 3.5 slack + tab_extra; walls/floor 2.4; interior corners filleted r4
-via `buffer(-r).buffer(r)`.
+(`apex_tip_x`) + 3.5 slack + tab_extra; interior depth = per-paper `depth`
+(default `DEPTH` 42; Deep 27 & cup 1: 47, cup 4: 54); walls/floor 2.4; interior
+corners filleted r4 via `buffer(-r).buffer(r)`.
 
 - **friction**: full-cover telescoping lid (skirt outside the base wall), clearance
   0.28/side; wide-end wall finger scoop (covered by the skirt when closed); skirt

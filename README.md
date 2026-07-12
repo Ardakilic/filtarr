@@ -31,8 +31,15 @@ The V60 boxes add radial clearance for the little **hanging tab** on the arc edg
 since its position varies by brand (Hario, CAFEC, generics), the whole interior is
 enlarged radially — **one box fits all brands**. If you only use tabless CAFEC cone
 papers, the dedicated `v60-cafec-*` cases are more compact (cup 4's friction design
-fits a 200 mm bed where the all-brands V60-02 needs 220). Bases hold a full 100-pack
-(42 mm deep interior) with slack all around, since papers fluff up once opened.
+fits a 200 mm bed where the all-brands V60-02 needs 220).
+
+Every base holds a **full 100-pack lying loose, never squeezed** — interior depths
+are sized per paper from measured stack heights: smooth Hario paper stacks ~32 mm
+per 100, so those cases are 42 mm deep; creped CAFEC paper barely compresses (a
+100-stack stays close to its 40–50 mm pouch thickness), so Deep 27 and cup 1 get
+47 mm and cup 4 gets 54 mm, with headroom because papers fluff up once opened.
+Tip: the crimped seam makes a stack lean taller on one side — flipping half the
+papers upside down balances the pile (the wedge is symmetric).
 
 ## The three designs
 
@@ -163,7 +170,7 @@ Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 | Parameter | Default | Meaning |
 |---|---|---|
 | `PAPERS` | 5 entries | the paper registry (side / angle / tab clearance / designs) |
-| `DEPTH` | 42 mm | interior depth (≈ full 100-pack) |
+| `DEPTH` / per-paper `depth` | 42 / 47 / 54 mm | interior depth — 42 default (Hario), deeper for creped CAFEC papers |
 | `CLEAR_FRICTION` / `CLEAR_MAGNET` | 0.28 / 0.50 mm | lid clearance per side |
 | `POCKET_D` / `POCKET_DEPTH` | 6.4 / 3.2 mm | magnet pocket (for Ø6 × 3 magnets) |
 | `ENGRAVE_TEXT` / `ENGRAVE_WIDTH` / `ENGRAVE_DEPTH` | "Filtarr" / 60 / 0.6 mm | lid engraving |
@@ -189,6 +196,11 @@ build image) otherwise.
   ([same footprint](https://thebasicbarista.com/en-us/products/cafec-abaca-filter-papers))
   have no tab; generic clones vary — the cases size for the largest case
   (Hario + tab), so all brands fit.
+- **100-pack stack heights** (they drive the interior depths): a single ply
+  measures 206–210 µm ([caliper data](https://coffeeadastra.com/2019/08/04/an-in-depth-analysis-of-coffee-filters-2/))
+  and a folded filter is two plies. Smooth Hario paper nests: ~32 mm per 100
+  (measured). CAFEC's one-sided crepe doesn't: a 100-stack stays near its pouch
+  thickness — 40 mm for Deep 27 and cup 1, 50 mm for cup 4.
 
 ## Design notes & credits
 

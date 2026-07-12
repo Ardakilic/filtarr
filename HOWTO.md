@@ -12,6 +12,7 @@ You need three numbers for the flat, folded paper (as it comes out of the pack):
 | `side` | Measure the **longest straight edge** from the tip, in mm — usually the crimped seam edge, which is ~10 mm longer than the plain folded edge. |
 | `angle` | The wedge angle of the flat paper. If you know the dripper's cone angle **A** (full apex angle), the flat folded paper is `180 × sin(A/2)` degrees. V60 (60° cone) → 90°. Deep 27 (27° cone) → 42°. Or measure a photo. |
 | `tab_extra` | Extra radial clearance in mm for the round hanging tab some brands put on the arc edge. The tab's *position* varies by brand, so we widen the whole interior radially — one box then fits every brand. Papers without tabs: `0`. Typical tab: `5`. |
+| `depth` (optional) | Interior depth in mm; default 42. Measure a loose 100-stack (or use the pouch thickness) and add ~5 mm so papers are never squeezed. Smooth papers (Hario) stack ~32 mm per 100 → the default fits; creped papers (CAFEC) stay near their pouch thickness → 47–54 mm. |
 
 Sanity check: the width across the wide-end corners should be
 `2 × arc_radius × sin(angle/2)`, where `arc_radius ≈ side − seam excess (~10 mm)`.
@@ -28,6 +29,8 @@ In `generate.py`, add to `PAPERS`:
     "side": 130.0,
     "angle": 90.0,
     "tab_extra": 0.0,
+    # optional: interior depth override for lofty (creped) papers, mm
+    # "depth": 47.0,
     # optional: generate only some designs (default: all three)
     # "designs": ("friction",),
 },

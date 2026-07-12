@@ -55,6 +55,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 #           put on the arc edge (position varies by brand — radial clearance
 #           covers every position, so one box fits all brands)
 # designs   optional: subset of DESIGNS to generate (default: all three)
+# depth     optional: interior depth override, mm (default DEPTH). Size it so a
+#           loose 100-pack drops in without squeezing: smooth Hario paper
+#           stacks ~32 mm/100, creped CAFEC paper ≈ its pouch thickness
+#           (40-50 mm/100) — see the README capacity notes.
 
 PAPERS = {
     "deep27": {
@@ -63,6 +67,7 @@ PAPERS = {
         "side": 155.0,      # user-measured; photo-verified
         "angle": 42.0,      # 27° cone -> 180*sin(13.5°) = 42.02°
         "tab_extra": 0.0,   # Deep 27 papers have no hanging tab
+        "depth": 47.0,      # 100-pack free stack ≈ 40 mm (pouch) + headroom
     },
     "v60-01": {
         "display": "V60 size 01 (Hario / CAFEC)",
@@ -87,6 +92,7 @@ PAPERS = {
         "side": 106.0,      # retail dims ~101 x 106 mm
         "angle": 90.0,
         "tab_extra": 0.0,
+        "depth": 47.0,      # 100-pack free stack ≈ 40 mm (pouch) + headroom
     },
     "v60-cafec-02": {
         "display": "CAFEC cone cup 4 (V60-02 size, tabless)",
@@ -94,6 +100,7 @@ PAPERS = {
         "side": 127.0,      # retail dims ~121 x 127 mm
         "angle": 90.0,
         "tab_extra": 0.0,
+        "depth": 54.0,      # 100-pack free stack ≈ 50 mm (pouch) + headroom
     },
 }
 
@@ -107,7 +114,8 @@ INNER_ROUND = 4.0        # fillet radius of the interior corners
 
 WALL_T = 2.4             # base wall thickness
 FLOOR_T = 2.4            # base floor thickness
-DEPTH = 42.0             # interior depth (≈ a full 100-pack with headroom)
+DEPTH = 42.0             # default interior depth (fits 100 smooth Hario papers,
+                         # measured stack ~32 mm); creped papers override per-paper
 
 # Telescoping designs (friction / magnet-skirt)
 SKIRT_T = 2.0            # lid skirt wall thickness
@@ -253,7 +261,8 @@ class Case:
         # after filleting, the interior apex tip sits this far from the origin
         self.apex_tip_x = INNER_ROUND * (1.0 / math.sin(math.radians(self.half)) - 1.0)
         self.r_int = self.side + self.apex_tip_x + RADIAL_SLACK + cfg["tab_extra"]
-        self.base_h = FLOOR_T + DEPTH
+        self.depth = cfg.get("depth", DEPTH)
+        self.base_h = FLOOR_T + self.depth
         self.engrave_x = ENGRAVE_POS_FRAC * self.r_int
 
         self.interior = (
@@ -488,7 +497,7 @@ def main():
         cases.append(case)
         print(f"\n=== {case.cfg['display']} ({slug}) — "
               f"interior {case.r_int - case.apex_tip_x:.0f} mm x "
-              f"{case.int_angle:.0f}°, {DEPTH:.0f} mm deep ===")
+              f"{case.int_angle:.0f}°, {case.depth:.0f} mm deep ===")
         stl_dir = os.path.join(case.out_dir, "stl")
         os.makedirs(stl_dir, exist_ok=True)
 
@@ -555,7 +564,7 @@ def build_preview(case, parts_world):
     dims = {
         "paper": f"{case.side:.0f} mm side, {case.angle:.0f}° wedge",
         "interior": f"{case.r_int - case.apex_tip_x:.0f} mm x "
-                    f"{case.int_angle:.0f}°, {DEPTH:.0f} mm deep",
+                    f"{case.int_angle:.0f}°, {case.depth:.0f} mm deep",
         "closedH": " / ".join(heights),
     }
     if has_magnets:
@@ -618,7 +627,8 @@ def build_index(cases):
          alt="Renders of the {case.cfg['display']} cases"></a>
     <h2>{case.cfg['display']}</h2>
     <p class="geo">{case.side:.0f} mm side · {case.angle:.0f}° wedge ·
-       {tab_txt} · {len(case.designs)} design{'s' if len(case.designs) > 1 else ''}</p>
+       {tab_txt} · {case.depth:.0f} mm deep ·
+       {len(case.designs)} design{'s' if len(case.designs) > 1 else ''}</p>
     <p><a class="btn" href="{folder}/{case.preview_name}">Interactive 3D preview</a></p>
     <details><summary>STL downloads</summary><ul>{stls}</ul></details>
   </article>""")
