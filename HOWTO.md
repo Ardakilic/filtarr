@@ -31,7 +31,7 @@ In `generate.py`, add to `PAPERS`:
     "tab_extra": 0.0,
     # optional: interior depth override for lofty (creped) papers, mm
     # "depth": 47.0,
-    # optional: generate only some designs (default: all four)
+    # optional: generate only some designs (default: all five)
     # "designs": ("friction",),
 },
 ```
@@ -43,8 +43,9 @@ Notes:
   `v60/preview-cafec-01.html`).
 - Multiple papers can share a folder (see the `v60-*` entries).
 - `designs` restricts which case designs are generated, e.g. `("friction",)` —
-  the default (all four) is right for most papers. The `magnet-pedestal` design
-  derives everything (bay, moat, +8 mm height) from the same entry.
+  the default (all five) is right for most papers. The `magnet-pedestal` and
+  `magnet-spring` designs derive everything (bay, moat, follower plate, extra
+  height) from the same entry.
 - Everything else (walls, lid clearances, magnets, scoop, engraving position)
   scales automatically from `side`/`angle` — the shared parameters live at the
   top of `generate.py` if a paper ever needs different treatment.

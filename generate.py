@@ -18,10 +18,18 @@ case designs:
                       wall, so single sheets are pinched from below via the
                       bay — the rim stays closed (dust-proof) and the box
                       grows PEDESTAL_H taller to keep full stack headroom
+  * magnet-spring   — magnet-flat shell + a spring-loaded follower plate
+                      under the stack (dispenser logic — see SPRING.md):
+                      open the lid and the top paper is always presented at
+                      the rim, no matter how few papers remain. Ships an
+                      extra follower STL and needs 3 light compression
+                      springs; closed it is exactly as dust-proof as
+                      magnet-flat
 
 Each design's lid also comes in an engraved version (ENGRAVE_TEXT on the
-top face), giving 8 printable variants per paper from 12 STLs (bases are
-shared between the plain and engraved variants):
+top face), giving 10 printable variants per paper from 16 STLs (bases are
+shared between the plain and engraved variants; magnet-spring adds a
+follower):
 
   <folder>/stl/<paper>-case-<design>-base.stl
   <folder>/stl/<paper>-case-<design>-lid.stl
@@ -172,6 +180,27 @@ BAY_D = 12.0             # bay depth outward beyond the interior wall
 PEDESTAL_H = 8.0         # pedestal height — enough to get a fingertip under
 MOAT_W = 15.0            # pedestal setback from the arc wall (+ tab_extra)
 
+# magnet-spring design: magnet-flat shell + a spring-loaded follower plate
+# ("Pez dispenser" presentation, proposed by a user): 3 light compression
+# springs under a paper-silhouette plate float the stack upward, so with the
+# lid off the top sheet always waits at the rim. The cavity has two tiers —
+# the lower tier is PLATE_STEP wider, and the plate (sized between the tiers)
+# rides freely below but cannot pass the ledge LEDGE_H under the rim: a
+# built-in travel stop with no extra parts. Closed, the stack floats against
+# the lid at the springs' light force; the total spring force must stay well
+# under the corner magnets' retention (spec + force budget: SPRING.md).
+PLATE_T = 2.4            # follower plate thickness
+PLATE_CLEAR = 0.5        # plate-to-wall clearance per side
+PLATE_STEP = 1.5         # lower-tier widening = plate overlap at the ledge
+LEDGE_H = 4.0            # travel-stop ledge distance below the rim
+SKIRT_H = 8.0            # follower anti-cocking skirt height (= spring solid budget)
+SEAT_ID = 10.6           # spring locating ring bore (fits Ø10 spring ends)
+SEAT_OD = 14.0           # spring locating ring outer diameter
+SEAT_H = 1.6             # locating ring height (floor and plate underside)
+FOLLOWER_ALLOW = SKIRT_H + PLATE_T + 1.6  # extra interior depth for the mechanism
+SPRING_POS_APEX = 0.30   # apex spring centre along the bisector, × R_INT
+SPRING_POS_ARC = 0.75    # wide-end spring centres at ±(half−9°), × R_INT
+
 # Engraving (lid top face). Upright when the tip of the wedge points at you.
 ENGRAVE_TEXT = "Filtarr"
 ENGRAVE_WIDTH = 60.0     # total width of the text block
@@ -192,7 +221,8 @@ FONT_CANDIDATES = [
 PREVIEW_STACK_H = 26.0
 
 QS = 24  # quad segments for shapely buffers (arc smoothness)
-DESIGNS = ("friction", "magnet-skirt", "magnet-flat", "magnet-pedestal")
+DESIGNS = ("friction", "magnet-skirt", "magnet-flat", "magnet-pedestal",
+           "magnet-spring")
 
 # --------------------------------------------------------------------------
 # STATELESS MESH HELPERS
@@ -340,6 +370,28 @@ class Case:
             .buffer(2.0, quad_segs=QS)
         )
 
+        # magnet-spring: two-tier cavity (lower tier PLATE_STEP wider), the
+        # follower plate sized between the tiers so the ledge is its travel
+        # stop; walls offset from the wider tier so thickness stays WALL_T
+        self.base_h_spring = self.base_h + FOLLOWER_ALLOW
+        self.cavity_spring = self.interior.buffer(PLATE_STEP, quad_segs=QS)
+        self.plate_poly = self.interior.buffer(PLATE_STEP - PLATE_CLEAR,
+                                               quad_segs=QS)
+        self.ext_spring = (
+            unary_union(
+                [self.cavity_spring.buffer(WALL_T, quad_segs=QS)]
+                + [Point(c).buffer(POCKET_D / 2.0 + 1.6, quad_segs=QS)
+                   for c in self.magnets_flat]
+            )
+            .buffer(CORNER_BLEND_R, quad_segs=QS)
+            .buffer(-CORNER_BLEND_R, quad_segs=QS)
+        )
+        arc = math.radians(self.half - 9.0)
+        self.springs = [(SPRING_POS_APEX * self.r_int, 0.0)] + [
+            (SPRING_POS_ARC * self.r_int * math.cos(side * arc),
+             SPRING_POS_ARC * self.r_int * math.sin(side * arc))
+            for side in (+1, -1)]
+
     # -- magnet layouts ------------------------------------------------------
 
     def _skirt_magnet_centres(self):
@@ -460,7 +512,7 @@ class Case:
             solid = prism(self.ext_flat, 0.0, self.base_h)
             cutters = [self.pry_cutter(self.r_int, self.base_h)] + pocket_cutters(
                 self.magnets_flat, self.base_h - POCKET_DEPTH, self.base_h + 1.0)
-        else:  # magnet-pedestal: papers picked via the finger bay + moat
+        elif design == "magnet-pedestal":  # picked via the finger bay + moat
             solid = prism(self.ext_ped, 0.0, self.base_h_ped)
             cutters = [self.pry_cutter(self.r_int + BAY_D, self.base_h_ped)]
             cutters += pocket_cutters(self.magnets_flat,
@@ -473,6 +525,22 @@ class Case:
             return trimesh.boolean.union(
                 [tray, prism(self.plinth, FLOOR_T - 1.0, FLOOR_T + PEDESTAL_H)],
                 check_volume=False)
+        else:  # magnet-spring: two-tier cavity + spring locating rings
+            top = self.base_h_spring
+            ledge_z = top - LEDGE_H
+            solid = prism(self.ext_spring, 0.0, top)
+            cutters = [self.pry_cutter(self.r_int + PLATE_STEP, top)]
+            cutters += pocket_cutters(self.magnets_flat, top - POCKET_DEPTH,
+                                      top + 1.0)
+            cutters.append(prism(self.cavity_spring, FLOOR_T, ledge_z))
+            cutters.append(prism(self.interior, ledge_z, top + 1.0))
+            tray = diff(solid, *cutters)
+            rings = [prism(Point(c).buffer(SEAT_OD / 2.0, quad_segs=QS)
+                           .difference(Point(c).buffer(SEAT_ID / 2.0,
+                                                       quad_segs=QS)),
+                           FLOOR_T - 1.0, FLOOR_T + SEAT_H)
+                     for c in self.springs]
+            return trimesh.boolean.union([tray] + rings, check_volume=False)
         cutters.append(prism(self.interior, FLOOR_T, self.base_h + 1.0))
         return diff(solid, *cutters)
 
@@ -486,11 +554,15 @@ class Case:
         else:
             plate_t = LID_T_MAGNET
 
-        if design in ("magnet-flat", "magnet-pedestal"):
-            outline, cavity, top = (
-                (self.ext_flat, self.interior, self.base_h)
-                if design == "magnet-flat"
-                else (self.ext_ped, self.interior_ped, self.base_h_ped))
+        if design in ("magnet-flat", "magnet-pedestal", "magnet-spring"):
+            outline, cavity, top = {
+                "magnet-flat": (self.ext_flat, self.interior, self.base_h),
+                "magnet-pedestal": (self.ext_ped, self.interior_ped,
+                                    self.base_h_ped),
+                # lip mates with the upper (paper-sized) tier of the cavity
+                "magnet-spring": (self.ext_spring, self.interior,
+                                  self.base_h_spring),
+            }[design]
             plate = prism(outline, top, top + plate_t)
             lip = prism(
                 cavity.buffer(-LIP_CLEAR, quad_segs=QS).difference(
@@ -512,7 +584,46 @@ class Case:
             cutters += self.engrave_cutters(top + plate_t)
         return diff(solid, *cutters)
 
+    def build_follower(self):
+        """magnet-spring: the paper-silhouette plate the stack rests on.
+        Plate top at z=PLATE_T; anti-cocking skirt and spring locating rings
+        hang below. Exported through print_orientation_lid, so it prints
+        top-face-down: smooth paper face on the bed, rings open upward."""
+        plate = prism(self.plate_poly, 0.0, PLATE_T)
+        skirt = prism(
+            self.plate_poly.difference(
+                self.plate_poly.buffer(-2.0, quad_segs=QS)),
+            -SKIRT_H, 0.5)
+        rings = [prism(Point(c).buffer(SEAT_OD / 2.0, quad_segs=QS)
+                       .difference(Point(c).buffer(SEAT_ID / 2.0, quad_segs=QS)),
+                       -SEAT_H, 0.5)
+                 for c in self.springs]
+        return trimesh.boolean.union([plate, skirt] + rings, check_volume=False)
+
     # -- preview-only ghosts --------------------------------------------------
+
+    @property
+    def spring_lift(self):
+        """Preview presentation state: follower raised so the ghost stack's
+        top sheet sits at the travel-stop ledge."""
+        return (self.base_h_spring - LEDGE_H - PREVIEW_STACK_H
+                - PLATE_T - FLOOR_T)
+
+    def spring_ghosts(self):
+        """Three schematic coil springs between the floor and the raised
+        follower plate's underside (preview only)."""
+        length = self.spring_lift - 0.4  # floor top to plate underside
+        coils, rad = 7, (SEAT_ID - 1.6) / 2.0
+        t = np.linspace(0.0, coils * 2.0 * np.pi, coils * 24)
+        meshes = []
+        for cx, cy in self.springs:
+            path = np.column_stack([
+                rad * np.cos(t) + cx, rad * np.sin(t) + cy,
+                FLOOR_T + 0.2 + length * t / t[-1]])
+            meshes.append(
+                trimesh.creation.sweep_polygon(
+                    Point(0.0, 0.0).buffer(0.5, quad_segs=8), path))
+        return trimesh.util.concatenate(meshes)
 
     def paper_ghost(self, lift=0.0):
         """Ghost paper stack; `lift` raises it onto the pedestal design's floor."""
@@ -578,6 +689,8 @@ def main():
             parts_world[f"{design}-base"] = case.build_base(design)
             parts_world[f"{design}-lid"] = case.build_lid(design)
             parts_world[f"{design}-lid-engraved"] = case.build_lid(design, engraved=True)
+            if design == "magnet-spring":
+                parts_world[f"{design}-follower"] = case.build_follower()
 
         for name, mesh in parts_world.items():
             assert mesh.is_watertight, f"{slug} {name} is not watertight!"
@@ -600,16 +713,28 @@ def b64stl(mesh):
 
 
 LID_COLORS = {"friction": "#2f8f83", "magnet-skirt": "#b3634f",
-              "magnet-flat": "#4f7cb3", "magnet-pedestal": "#8a5fb3"}
+              "magnet-flat": "#4f7cb3", "magnet-pedestal": "#8a5fb3",
+              "magnet-spring": "#c08a3e"}
+
+
+def ghost_lift(case, design):
+    """Ghost-stack z offset per design (pedestal floor / raised follower)."""
+    if design == "magnet-pedestal":
+        return PEDESTAL_H
+    if design == "magnet-spring":
+        return case.spring_lift + PLATE_T
+    return 0.0
 
 
 def build_preview(case, parts_world):
-    ghosts = {0.0: b64stl(case.paper_ghost())}
-    if "magnet-pedestal" in case.designs:
-        ghosts[PEDESTAL_H] = b64stl(case.paper_ghost(PEDESTAL_H))
+    ghosts = {}
+    for d in case.designs:
+        lf = ghost_lift(case, d)
+        if lf not in ghosts:
+            ghosts[lf] = b64stl(case.paper_ghost(lf))
     variants = {}
     for design in case.designs:
-        lift = PEDESTAL_H if design == "magnet-pedestal" else 0.0
+        lift = ghost_lift(case, design)
         parts = [
             {"name": "base", "attach": "base", "color": "#8a8f98",
              "stl": b64stl(parts_world[f"{design}-base"])},
@@ -623,27 +748,43 @@ def build_preview(case, parts_world):
         if design != "friction":
             centres = (case.magnets_skirt if design == "magnet-skirt"
                        else case.magnets_flat)
-            mb, ml = case.magnet_ghosts(
-                centres,
-                case.base_h_ped if design == "magnet-pedestal" else None)
+            tops = {"magnet-pedestal": case.base_h_ped,
+                    "magnet-spring": case.base_h_spring}
+            mb, ml = case.magnet_ghosts(centres, tops.get(design))
             parts += [
                 {"name": "magnets", "attach": "base", "color": "#d7dade",
                  "metal": True, "stl": b64stl(mb)},
                 {"name": "magnets-lid", "attach": "lid", "color": "#d7dade",
                  "metal": True, "stl": b64stl(ml)},
             ]
+        if design == "magnet-spring":
+            follower = parts_world["magnet-spring-follower"].copy()
+            follower.apply_translation([0.0, 0.0, FLOOR_T + case.spring_lift])
+            parts += [
+                {"name": "follower", "attach": "base", "color": "#b8934d",
+                 "stl": b64stl(follower)},
+                {"name": "springs", "attach": "base", "color": "#d7dade",
+                 "metal": True, "stl": b64stl(case.spring_ghosts())},
+            ]
         variants[design] = parts
 
     has_magnets = any(d.startswith("magnet") for d in case.designs)
     has_pedestal = "magnet-pedestal" in case.designs
+    has_spring = "magnet-spring" in case.designs
     heights = [f"{case.base_h + LID_T_FRICTION:.0f} mm (friction)"]
     if has_magnets:
         heights.append(f"{case.base_h + LID_T_MAGNET:.0f} mm (magnet)")
     if has_pedestal:
         heights.append(f"{case.base_h_ped + LID_T_MAGNET:.0f} mm (pedestal)")
+    if has_spring:
+        heights.append(f"{case.base_h_spring + LID_T_MAGNET:.0f} mm (spring)")
     depth_txt = f"{case.depth:.0f} mm deep"
-    if has_pedestal:
-        depth_txt += f" ({case.depth + PEDESTAL_H:.0f} pedestal)"
+    extra_depths = ([f"{case.depth + PEDESTAL_H:.0f} pedestal"] if has_pedestal
+                    else [])
+    if has_spring:
+        extra_depths.append(f"{case.depth + FOLLOWER_ALLOW:.0f} spring")
+    if extra_depths:
+        depth_txt += f" ({', '.join(extra_depths)})"
     dims = {
         "paper": f"{case.side:.0f} mm side, {case.angle:.0f}° wedge",
         "interior": f"{case.r_int - case.apex_tip_x:.0f} mm x "
@@ -651,22 +792,29 @@ def build_preview(case, parts_world):
         "closedH": " / ".join(heights),
     }
     if has_magnets:
-        dims["magnets"] = (f"Ø6x3 mm discs — skirt: 8, flat/pedestal: 6; "
+        dims["magnets"] = (f"Ø6x3 mm discs — skirt: 8, flat/pedestal/spring: 6; "
                            f"pockets {POCKET_D:.1f} x {POCKET_DEPTH:.1f} mm")
-    mag_counts = {"magnet-skirt": 8, "magnet-flat": 6, "magnet-pedestal": 6}
+    mag_counts = {"magnet-skirt": 8, "magnet-flat": 6, "magnet-pedestal": 6,
+                  "magnet-spring": 6}
+
+    def print_info(design):
+        info = {
+            "base": f"stl/{case.slug}-case-{design}-base.stl",
+            "lid": f"stl/{case.slug}-case-{design}-lid.stl",
+            "lid_engraved": f"stl/{case.slug}-case-{design}-lid-engraved.stl",
+            "magnets": (f"{mag_counts[design]}x Ø6x3 mm magnets + glue"
+                        if design in mag_counts else None),
+        }
+        if design == "magnet-spring":
+            info["extra"] = f"stl/{case.slug}-case-{design}-follower.stl"
+            info["magnets"] += " + 3 light springs (SPRING.md)"
+        return info
+
     data = {
         "title": f"Filtarr — {case.cfg['display']}",
         "variants": variants,
         "dims": dims,
-        "print": {
-            design: {
-                "base": f"stl/{case.slug}-case-{design}-base.stl",
-                "lid": f"stl/{case.slug}-case-{design}-lid.stl",
-                "lid_engraved": f"stl/{case.slug}-case-{design}-lid-engraved.stl",
-                "magnets": (f"{mag_counts[design]}x Ø6x3 mm magnets + glue"
-                            if design in mag_counts else None),
-            } for design in case.designs
-        },
+        "print": {design: print_info(design) for design in case.designs},
     }
 
     def b64file(name):
@@ -703,7 +851,8 @@ def build_index(cases):
             f'<li><a href="{folder}/stl/{case.slug}-case-{design}-{part}.stl">'
             f"{case.slug}-case-{design}-{part}.stl</a></li>"
             for design in case.designs
-            for part in ("base", "lid", "lid-engraved"))
+            for part in (("base", "lid", "lid-engraved")
+                         + (("follower",) if design == "magnet-spring" else ())))
         cards.append(f"""
   <article>
     <a href="{renders}"><img loading="lazy" src="{renders}"

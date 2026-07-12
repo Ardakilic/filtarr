@@ -25,17 +25,19 @@ tools/fetch_three.py         downloads latest three.module.min.js + three.core.m
 vendor/                      both three.js files + THREE_VERSION (committed)
 LICENSE / LICENSE-MODELS     MIT (code) / CC BY 4.0 (models & images)
 HOWTO.md                     how to add a new paper variant (keep in sync with PAPERS)
+SPRING.md                    magnet-spring design: rationale, spring spec, force budget, risks
 index.html                   generated Pages landing page — never edit by hand
 deep27/                      CAFEC Deep 27 outputs: stl/, docs/, preview.html
 v60/                         V60 outputs: 01, 02, cafec-01, cafec-02 (stl/, docs/, preview-*.html)
 ```
 
 Per design: 3 STLs (base / lid / lid-engraved), named
-`<paper>-case-<design>-<part>.stl`. Design keys: `friction | magnet-skirt |
-magnet-flat | magnet-pedestal` (also the preview tab keys). A PAPERS entry may
-restrict designs via `"designs": (...)`; currently all five papers ship all
-four designs (the CAFEC entries were friction-only briefly — the user asked
-for all of them).
+`<paper>-case-<design>-<part>.stl`; magnet-spring adds a 4th (`-follower`).
+Design keys: `friction | magnet-skirt | magnet-flat | magnet-pedestal |
+magnet-spring` (also the preview tab keys). A PAPERS entry may restrict
+designs via `"designs": (...)`; currently all five papers ship all five
+designs (the CAFEC entries were friction-only briefly — the user asked for
+all of them).
 
 ## Commands
 
@@ -79,7 +81,7 @@ For dev-only verification (ray casts need rtree+scipy, not in requirements.txt):
   Docker image's metric-compatible Arial substitute — the canonical output) →
   regular weights. Gotcha: `FontProperties(family="sans-serif")` must be
   `family=["sans-serif"]` (a bare string is parsed as a fontconfig pattern → crash).
-- **Previews are fully self-contained** (~8–12 MB each): the latest three.js
+- **Previews are fully self-contained** (~12–16 MB each): the latest three.js
   **ES-module** build (UMD was dropped after r160) is base64-embedded in
   `<script type="text/plain">` blocks and loaded at runtime via **blob dynamic
   imports** — no import maps, works offline from `file://` in Safari/Chrome/
@@ -96,9 +98,10 @@ For dev-only verification (ray casts need rtree+scipy, not in requirements.txt):
   intensities. Template placeholders: `/*__THREE_B64__*/`,
   `/*__THREE_CORE_B64__*/`, `/*__DATA__*/null`; title/subtitle via `DATA.title`;
   variant tabs are built dynamically from `DATA.variants` keys (papers can have a
-  designs subset); `DATA.print` drives the "Print these two" panel — download
-  links to the exact STL files (+ magnet count) for the selected variant and
-  engraving toggle (engraving is ON by default).
+  designs subset); `DATA.print` drives the "Print these" panel — download
+  links to the exact STL files (+ hardware note, + optional `extra` file for
+  the spring follower) for the selected variant and engraving toggle
+  (engraving is ON by default).
   Smoke-test embedded payloads without a browser: extract both b64 blocks from a
   generated preview, write them side by side, `node -e "import('./three.module.min.js')"`.
 - **Verification without a browser/GPU** (no headless Chrome for screenshots):
@@ -137,7 +140,7 @@ Cone with full apex angle A → flat sector `360·sin(A/2)`° → folded wedge
   Papers fluff up after opening; keep generous slack (V60 community lesson: boxes
   repeatedly had to be rescaled).
 
-## Design map (4 designs × plain/engraved lid = 8 variants per paper)
+## Design map (5 designs × plain/engraved lid = 10 variants per paper)
 
 Shared: interior = paper angle + 3° slack, R_INT = side + rounded-apex offset
 (`apex_tip_x`) + 3.5 slack + tab_extra; interior depth = per-paper `depth`
@@ -168,6 +171,21 @@ corners filleted r4 via `buffer(-r).buffer(r)`.
   from below, down to the last paper. The interior is deepened by PEDESTAL_H,
   so headroom stays = per-paper depth (never squeezed) and the closed box is
   8 mm taller. Base is diff-then-union: cavity cut first, plinth unioned after.
+- **magnet-spring** (experimental, added 2026-07-12 from Arda's friend Murat's
+  idea — spring-follower dispenser: top paper always presented at the rim):
+  magnet-flat closure + a follower plate (own STL, prints top-face-down) on
+  3 light metal compression springs (BOM, not printed — printed springs
+  creep). Two-tier cavity: lower tier `PLATE_STEP` 1.5 wider; the plate
+  (interior+1.0) rides only in the lower tier, so the ledge `LEDGE_H` 4 under
+  the rim is a parts-free travel stop; papers pass freely. Anti-cocking: 8 mm
+  perimeter skirt + tripod spring layout (`SPRING_POS_APEX/ARC`); Ø10.6/14
+  locating rings on floor + plate underside, no glue. Interior deepens by
+  `FOLLOWER_ALLOW` 12 (skirt 8 + plate 2.4 + 1.6). CRITICAL rule: total
+  spring force at full compression ≤ ~4 N, well under the corner magnets'
+  ~6–12 N retention (why there is no friction-spring variant). Full spec,
+  force budget and risk register: SPRING.md. Rejected from Murat's original
+  sketch: dispensing window + retaining lips (breaks dust-proofness,
+  unreliable on flat stacks), refill latch (load top-down instead).
 
 Magnets: Ø6 × 3 mm discs (user owns these), pockets Ø6.4 × 3.2 → ~0.2 mm recess per
 side so pairs never touch (controlled snap, one-hand open). Polarity is set at glue

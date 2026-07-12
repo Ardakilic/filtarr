@@ -2,7 +2,8 @@
 
 3D-printable, dust-proof storage boxes for **pour-over paper filters** — currently
 five papers (CAFEC Deep 27, Hario/CAFEC V60 sizes 01 & 02, and compact tabless CAFEC
-cone variants) in four case designs, each with an optional engraved lid. Everything
+cone variants) in five case designs (one an experimental spring-loaded dispenser —
+see [SPRING.md](SPRING.md)), each with an optional engraved lid. Everything
 is generated from one parametric Python script; adding a new paper is one registry
 entry ([HOWTO](HOWTO.md)).
 
@@ -21,11 +22,11 @@ variants.*
 
 | Paper | Flat geometry | Designs | Largest part |
 |---|---|---|---|
-| CAFEC Deep 27 (Abaca+) — [`deep27/`](deep27/) | 42° wedge, 155 mm side, no tab | all 4 | 182 × 142 mm |
-| V60 size 01 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤107 mm seam edge + tab | all 4 | 140 × 187 mm |
-| V60 size 02 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤128 mm seam edge + tab | all 4 | 162 × 219 mm |
-| CAFEC cone cup 1, tabless — [`v60/`](v60/) | 90° wedge, 106 mm seam edge, no tab | all 4 | 133 × 177 mm |
-| CAFEC cone cup 4, tabless — [`v60/`](v60/) | 90° wedge, 127 mm seam edge, no tab | all 4 | 154 × 207 mm |
+| CAFEC Deep 27 (Abaca+) — [`deep27/`](deep27/) | 42° wedge, 155 mm side, no tab | all 5 | 182 × 142 mm |
+| V60 size 01 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤107 mm seam edge + tab | all 5 | 140 × 187 mm |
+| V60 size 02 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤128 mm seam edge + tab | all 5 | 162 × 219 mm |
+| CAFEC cone cup 1, tabless — [`v60/`](v60/) | 90° wedge, 106 mm seam edge, no tab | all 5 | 133 × 177 mm |
+| CAFEC cone cup 4, tabless — [`v60/`](v60/) | 90° wedge, 127 mm seam edge, no tab | all 5 | 154 × 207 mm |
 
 The V60 boxes add radial clearance for the little **hanging tab** on the arc edge;
 since its position varies by brand (Hario, CAFEC, generics), the whole interior is
@@ -43,15 +44,15 @@ The pedestal design adds its 8 mm pedestal *on top* of these depths, so its box 
 Tip: the crimped seam makes a stack lean taller on one side — flipping half the
 papers upside down balances the pile (the wedge is symmetric).
 
-## The four designs
+## The five designs
 
-| | Friction fit | Magnetic (skirt) | Magnetic (flat lid) | Magnetic (pedestal) |
-|---|---|---|---|---|
-| Lid style | full-cover telescoping lid | full-cover telescoping lid | flat lay-on lid, MAG-BOX style | flat lay-on lid, MAG-BOX style |
-| Closure | snug fit (0.28 mm/side) | loose glide + 4 magnet pairs | 3 magnet pairs in the corners | 3 magnet pairs in the corners |
-| Magnets needed | none | 8× Ø6 × 3 mm | 6× Ø6 × 3 mm | 6× Ø6 × 3 mm |
-| Paper access | finger scoop in the wide-end wall | finger scoop in the wide-end wall | whole top opens; pry slot under the lid edge | finger bay + moat: pinch one sheet from under its edge |
-| Character | no hardware at all | most dust-proof magnetic option | simplest, lightest lid, one-hand open | easiest paper picking, 8 mm taller |
+| | Friction fit | Magnetic (skirt) | Magnetic (flat lid) | Magnetic (pedestal) | Magnetic (spring) |
+|---|---|---|---|---|---|
+| Lid style | full-cover telescoping lid | full-cover telescoping lid | flat lay-on lid, MAG-BOX style | flat lay-on lid, MAG-BOX style | flat lay-on lid, MAG-BOX style |
+| Closure | snug fit (0.28 mm/side) | loose glide + 4 magnet pairs | 3 magnet pairs in the corners | 3 magnet pairs in the corners | 3 magnet pairs in the corners |
+| Hardware | none | 8× Ø6 × 3 mm magnets | 6× Ø6 × 3 mm magnets | 6× Ø6 × 3 mm magnets | 6 magnets + 3 light springs |
+| Paper access | finger scoop in the wide-end wall | finger scoop in the wide-end wall | whole top opens; pry slot under the lid edge | finger bay + moat: pinch one sheet from under its edge | spring-loaded follower presents the top sheet at the rim |
+| Character | no hardware at all | most dust-proof magnetic option | simplest, lightest lid, one-hand open | easiest paper picking, 8 mm taller | *experimental* dispenser feel — [SPRING.md](SPRING.md) |
 
 **Why the pedestal design?** With a flat lid the whole top opens, but sliding a single
 sheet off a deep tray wall is fiddly — and papers with a hanging tab (Hario) make a
@@ -61,6 +62,14 @@ paper edge — tab included — overhangs a moat. A full-height finger bay bulge
 *outward* mid-arc, keeping the rim closed and the box dust-proof, and lets you reach
 under the overhanging edge and pinch out one sheet, down to the very last paper. The
 interior is 8 mm deeper, so the 100-pack keeps its full never-squeezed headroom.
+
+**The spring design (experimental).** A follower plate in the paper's silhouette
+floats the whole stack on three light compression springs: lift the lid and the top
+sheet is always presented at the rim, from paper #100 to paper #1. A two-tier cavity
+gives the plate a built-in travel stop, a perimeter skirt stops it cocking, and the
+total spring force is budgeted well under the magnets' retention so the box stays
+just as dust-proof. Full rationale, spring spec, force budget and risk register:
+**[SPRING.md](SPRING.md)**.
 
 Shared features: finger scoop (telescoping designs) reaching to 8 mm above the floor,
 fully covered when closed; grip notches and a 3 mm exposed base rim so the telescoping
@@ -111,7 +120,7 @@ fully self-contained HTML file (no internet needed), open in any browser:
 
 Switch between the designs, toggle the engraving, lift the lid with the slider, and
 turn on X-ray or the ghost paper stack (which includes the V60 tab). The **"Print
-these two"** panel always names the exact STL files (and magnet count) for what you're
+these"** panel always names the exact STL files (and hardware) for what you're
 looking at, and "← All papers" returns to the index.
 
 ## Files
@@ -124,7 +133,10 @@ the same design:
 <folder>/stl/<paper>-case-magnet-skirt-{base,lid,lid-engraved}.stl
 <folder>/stl/<paper>-case-magnet-flat-{base,lid,lid-engraved}.stl
 <folder>/stl/<paper>-case-magnet-pedestal-{base,lid,lid-engraved}.stl
+<folder>/stl/<paper>-case-magnet-spring-{base,lid,lid-engraved,follower}.stl
 ```
+
+(The spring design has a fourth STL — the follower plate the papers rest on.)
 
 ## Printing
 
@@ -148,8 +160,10 @@ regenerate. Both magnetic designs are tolerance-forgiving by design.
 ## Magnet assembly (all magnetic designs)
 
 Magnets: **Ø6 mm × 3 mm** discs (N35 or stronger) — 8 for the skirt design, 6 for the
-flat and pedestal designs. Pockets are Ø6.4 × 3.2 mm, so each magnet sits ~0.2 mm
-recessed — facing pairs never touch, giving a gentle snap that opens with one hand.
+flat, pedestal and spring designs. Pockets are Ø6.4 × 3.2 mm, so each magnet sits
+~0.2 mm recessed — facing pairs never touch, giving a gentle snap that opens with one
+hand. (The spring design additionally needs 3 compression springs — spec in
+[SPRING.md](SPRING.md); they sit in locating rings, no glue.)
 
 Get the polarity right on the first try:
 
@@ -191,6 +205,7 @@ Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 | `SCOOP_W` | 36 mm | finger scoop width (telescoping designs) |
 | `PEDESTAL_H` / `MOAT_W` | 8 / 15 mm | pedestal design: pedestal height / moat width (+ tab clearance) |
 | `BAY_W` / `BAY_D` | 34 / 12 mm | pedestal design: finger bay opening width / outward depth |
+| `FOLLOWER_ALLOW` / `PLATE_STEP` / `LEDGE_H` | 12 / 1.5 / 4 mm | spring design: mechanism depth / plate-ledge overlap / travel stop below rim |
 
 The engraving font comes from `FONT_CANDIDATES`: Arial Bold where available, and
 Liberation Sans Bold (the metric-compatible Arial substitute installed in the Docker

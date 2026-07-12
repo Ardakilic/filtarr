@@ -234,7 +234,8 @@ function main(THREE) {
   const spinBox = $("spin");
 
   const LABELS = { "friction": "Friction", "magnet-skirt": "Mag skirt",
-                   "magnet-flat": "Mag flat", "magnet-pedestal": "Pedestal" };
+                   "magnet-flat": "Mag flat", "magnet-pedestal": "Pedestal",
+                   "magnet-spring": "Spring" };
   const tabsBox = $("tabs");
   for (const name of Object.keys(DATA.variants)) {
     const b = document.createElement("button");
@@ -282,8 +283,9 @@ function main(THREE) {
     const pr = DATA.print && DATA.print[active];
     if (pr) {
       const link = f => `<div class="file"><a href="${f}" download>${f}</a></div>`;
-      $("parts").innerHTML = "<b>Print these two</b>" +
+      $("parts").innerHTML = "<b>Print these</b>" +
         link(pr.base) + link(engraved ? pr.lid_engraved : pr.lid) +
+        (pr.extra ? link(pr.extra) : "") +
         (pr.magnets ? `<div class="need">plus ${pr.magnets}</div>` : "");
     }
   }

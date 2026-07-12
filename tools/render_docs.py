@@ -65,7 +65,8 @@ def show(ax, meshes_cols, elev=25, azim=-55):
 GRAY, CREAM, STEEL = "#9aa2ad", "#efe3c8", "#dfe3e8"
 TITLES = {"friction": "Friction fit", "magnet-skirt": "Magnetic (skirt)",
           "magnet-flat": "Magnetic (flat lid)",
-          "magnet-pedestal": "Magnetic (pedestal)"}
+          "magnet-pedestal": "Magnetic (pedestal)",
+          "magnet-spring": "Magnetic (spring)"}
 
 
 def lift(m, dz):
@@ -83,17 +84,22 @@ def render_grid(g, case, out_path):
     fig = plt.figure(figsize=(5 * n, 9), dpi=130)
     for col, design in enumerate(case.designs):
         pedestal = design == "magnet-pedestal"
+        spring = design == "magnet-spring"
         base = case.build_base(design)
         lid = case.build_lid(design)
-        paper = case.paper_ghost(g.PEDESTAL_H if pedestal else 0.0)
+        paper = case.paper_ghost(g.ghost_lift(case, design))
         color = g.LID_COLORS[design]
         closed = [(base, GRAY), (lid, color)]
         lifted = [(base, GRAY), (paper, CREAM), (lift(lid, 70), color)]
+        if spring:
+            follower = lift(case.build_follower(), g.FLOOR_T + case.spring_lift)
+            lifted += [(follower, "#c9a55f"), (case.spring_ghosts(), STEEL)]
         if design.startswith("magnet"):
             centres = (case.magnets_skirt if design == "magnet-skirt"
                        else case.magnets_flat)
-            mb, ml = case.magnet_ghosts(
-                centres, case.base_h_ped if pedestal else None)
+            tops = {"magnet-pedestal": case.base_h_ped,
+                    "magnet-spring": case.base_h_spring}
+            mb, ml = case.magnet_ghosts(centres, tops.get(design))
             lifted += [(mb, STEEL), (lift(ml, 70), STEEL)]
         ax = fig.add_subplot(2, n, col + 1, projection="3d")
         show(ax, closed)
