@@ -87,7 +87,6 @@ PAPERS = {
         "side": 106.0,      # retail dims ~101 x 106 mm
         "angle": 90.0,
         "tab_extra": 0.0,
-        "designs": ("friction",),
     },
     "v60-cafec-02": {
         "display": "CAFEC cone cup 4 (V60-02 size, tabless)",
@@ -95,7 +94,6 @@ PAPERS = {
         "side": 127.0,      # retail dims ~121 x 127 mm
         "angle": 90.0,
         "tab_extra": 0.0,
-        "designs": ("friction",),
     },
 }
 

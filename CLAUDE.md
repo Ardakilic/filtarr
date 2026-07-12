@@ -33,7 +33,8 @@ v60/                         V60 outputs: 01, 02, cafec-01, cafec-02 (stl/, docs
 Per design: 3 STLs (base / lid / lid-engraved), named
 `<paper>-case-<design>-<part>.stl`. Design keys: `friction | magnet-skirt |
 magnet-flat` (also the preview tab keys). A PAPERS entry may restrict designs
-via `"designs": (...)` — the tabless `v60-cafec-*` papers are friction-only.
+via `"designs": (...)`; currently all five papers ship all three designs (the
+CAFEC entries were friction-only briefly — the user asked for all three).
 
 ## Commands
 
@@ -121,8 +122,8 @@ Cone with full apex angle A → flat sector `360·sin(A/2)`° → folded wedge
   **hanging tab** (~15 mm wide, protrudes ~5–7 mm) on the arc edge next to the seam
   corner; CAFEC cone papers (cup 1 ≈ 101 × 106, cup 4 ≈ 121 × 127) have NO tab;
   clones vary — so `tab_extra` enlarges the interior radially and one box fits all
-  brands. The `v60-cafec-*` entries are tabless/compact friction-only cases for
-  CAFEC-only users (cup 4 fits a 200 mm bed vs 220 for the all-brands V60-02).
+  brands. The `v60-cafec-*` entries are tabless/compact cases for CAFEC-only
+  users (cup 4 friction fits a 200 mm bed vs 220 for the all-brands V60-02).
   Papers fluff up after opening; keep generous slack (V60 community lesson: boxes
   repeatedly had to be rescaled).
 
@@ -193,5 +194,6 @@ upright when the wedge TIP points at the reader (the `rotate(-90)` in
   "Filtarr", dual-licensed MIT (code) + CC BY 4.0 (models & images).
 - Previews confirmed working in his browser after the r167 core-split fix.
 - Print feedback pending: friction-fit tolerance, magnet snap strength, scoop width.
-- V60-02 parts are up to ~219 mm wide (needs a 220 bed); V60-01 up to ~187 mm —
-  flag bed-size limits when relevant.
+- Widest parts per paper: V60-02 ~219 mm (needs a 220 bed), CAFEC cup 4 ~207 mm,
+  V60-01 ~187 mm, CAFEC cup 1 ~176 mm, Deep 27 ~172 mm — flag bed-size limits
+  when relevant.

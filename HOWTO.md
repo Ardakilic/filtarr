@@ -39,8 +39,8 @@ Notes:
   `<folder>/preview-<rest>.html` (e.g. `v60/preview-01.html`,
   `v60/preview-cafec-01.html`).
 - Multiple papers can share a folder (see the `v60-*` entries).
-- `designs` restricts which case designs are generated — the tabless
-  `v60-cafec-*` papers use `("friction",)`.
+- `designs` restricts which case designs are generated, e.g. `("friction",)` —
+  the default (all three) is right for most papers.
 - Everything else (walls, lid clearances, magnets, scoop, engraving position)
   scales automatically from `side`/`angle` — the shared parameters live at the
   top of `generate.py` if a paper ever needs different treatment.

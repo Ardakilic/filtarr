@@ -24,15 +24,15 @@ variants.*
 | CAFEC Deep 27 (Abaca+) — [`deep27/`](deep27/) | 42° wedge, 155 mm side, no tab | all 3 | 172 × 142 mm |
 | V60 size 01 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤107 mm seam edge + tab | all 3 | 128 × 187 mm |
 | V60 size 02 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤128 mm seam edge + tab | all 3 | 150 × 219 mm |
-| CAFEC cone cup 1, tabless — [`v60/`](v60/) | 90° wedge, 106 mm seam edge, no tab | friction | 119 × 167 mm |
-| CAFEC cone cup 4, tabless — [`v60/`](v60/) | 90° wedge, 127 mm seam edge, no tab | friction | 140 × 198 mm |
+| CAFEC cone cup 1, tabless — [`v60/`](v60/) | 90° wedge, 106 mm seam edge, no tab | all 3 | 121 × 176 mm |
+| CAFEC cone cup 4, tabless — [`v60/`](v60/) | 90° wedge, 127 mm seam edge, no tab | all 3 | 142 × 207 mm |
 
 The V60 boxes add radial clearance for the little **hanging tab** on the arc edge;
 since its position varies by brand (Hario, CAFEC, generics), the whole interior is
 enlarged radially — **one box fits all brands**. If you only use tabless CAFEC cone
-papers, the dedicated `v60-cafec-*` friction-fit cases are more compact (cup 4 fits a
-200 mm bed where the all-brands V60-02 needs 220). Bases hold a full 100-pack (42 mm
-deep interior) with slack all around, since papers fluff up once opened.
+papers, the dedicated `v60-cafec-*` cases are more compact (cup 4's friction design
+fits a 200 mm bed where the all-brands V60-02 needs 220). Bases hold a full 100-pack
+(42 mm deep interior) with slack all around, since papers fluff up once opened.
 
 ## The three designs
 
@@ -61,15 +61,15 @@ no supports needed in the exported print orientation.
 
 ![V60 size 02 cases](v60/docs/renders-02.png)
 
-**CAFEC cone cup 1, tabless** — compact, friction fit only —
+**CAFEC cone cup 1, tabless** — compact —
 [interactive preview](https://ardakilic.github.io/filtarr/v60/preview-cafec-01.html)
 
-![CAFEC cone cup 1 case](v60/docs/renders-cafec-01.png)
+![CAFEC cone cup 1 cases](v60/docs/renders-cafec-01.png)
 
-**CAFEC cone cup 4, tabless** — compact, friction fit only —
+**CAFEC cone cup 4, tabless** — compact —
 [interactive preview](https://ardakilic.github.io/filtarr/v60/preview-cafec-02.html)
 
-![CAFEC cone cup 4 case](v60/docs/renders-cafec-02.png)
+![CAFEC cone cup 4 cases](v60/docs/renders-cafec-02.png)
 
 ## The "Filtarr" engraving
 
@@ -107,13 +107,12 @@ the same design:
 <folder>/stl/<paper>-case-magnet-flat-{base,lid,lid-engraved}.stl
 ```
 
-The tabless `v60-cafec-*` papers ship the friction design only.
-
 ## Printing
 
 - **Bed size**: see the supported-papers table. Deep 27 and CAFEC cup 1 fit
   180 × 180 mm beds; V60-01 needs ~190 mm in one axis (its friction design fits 180);
-  CAFEC cup 4 needs ~200 mm; the all-brands V60-02 needs a 220 mm bed.
+  CAFEC cup 4 needs ~200 mm (friction/skirt) to ~210 mm (flat lid); the all-brands
+  V60-02 needs a 220 mm bed.
 - **Material**: PLA or PETG, 0.4 mm nozzle, 0.2 mm layers, 3 perimeters, 10–15 % infill.
 - **Warping**: large flat parts — use a brim or good bed adhesion, especially PETG.
 - No supports. Lids print top-face-down: smooth first-layer finish, crisp engraving,
