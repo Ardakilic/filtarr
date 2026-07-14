@@ -112,7 +112,8 @@ fully self-contained HTML file (no internet needed), open in any browser:
 Switch between the designs, toggle the engraving, lift the lid with the slider, and
 turn on X-ray or the ghost paper stack (which includes the V60 tab). The **"Print
 these two"** panel always names the exact STL files (and magnet count) for what you're
-looking at, and "← All papers" returns to the index.
+looking at, the Dimensions panel lists the printer-fit tolerances, and "← All papers"
+returns to the index.
 
 ## Files
 
@@ -135,15 +136,36 @@ the same design:
   (friction/skirt) to ~210 mm (flat/pedestal); the all-brands V60-02 needs a 220 mm
   bed.
 - **Material**: PLA or PETG, 0.4 mm nozzle, 0.2 mm layers, 3 perimeters, 10–15 % infill.
+- **Tolerances** (as designed, for a calibrated printer): friction lid **0.28 mm**
+  clearance per side (snug snap fit); magnet-skirt lid **0.50 mm** per side (loose
+  glide — the magnets do the holding); flat/pedestal lid alignment lip **0.5 mm**
+  per side; magnet pockets **Ø6.4 × 3.2 mm** for Ø6 × 3 magnets (+0.4 mm diameter
+  for glue, 0.2 mm recess so facing magnets never touch). Every preview repeats
+  these in its Dimensions panel, and all of them are adjustable — see
+  [Fit tuning](#fit-tuning).
 - **Warping**: large flat parts — use a brim or good bed adhesion, especially PETG.
 - No supports. Lids print top-face-down: smooth first-layer finish, crisp engraving,
   and magnet pockets become open blind holes.
 
-### Fit tuning (friction design)
+### Fit tuning
 
-Printers vary. If the friction lid is too tight or too loose, either scale the **lid
-only** by ∓0.2 % in XY in your slicer, or change `CLEAR_FRICTION` in `generate.py` and
-regenerate. Both magnetic designs are tolerance-forgiving by design.
+Printers vary. Every fit tolerance is a command-line flag — no code editing — and
+STLs, previews and index all regenerate consistently:
+
+```bash
+make generate GEN_ARGS="--clear-friction 0.32"
+```
+
+| Flag | Default | Controls |
+|---|---|---|
+| `--clear-friction` | 0.28 mm | friction lid clearance per side — tune in ±0.04 steps |
+| `--clear-magnet` | 0.50 mm | magnet-skirt lid glide clearance per side |
+| `--lip-clear` | 0.50 mm | flat/pedestal lid alignment-lip clearance per side |
+| `--pocket-d` / `--pocket-depth` | 6.4 / 3.2 mm | magnet pockets (for Ø6 × 3 mm discs) |
+
+Quick alternative if only the friction lid is too tight/loose: scale the **lid
+only** by ∓0.2 % in XY in your slicer. Both magnetic closures are
+tolerance-forgiving by design.
 
 ## Magnet assembly (all magnetic designs)
 
@@ -185,8 +207,9 @@ Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 |---|---|---|
 | `PAPERS` | 5 entries | the paper registry (side / angle / tab clearance / designs) |
 | `DEPTH` / per-paper `depth` | 42 / 47 / 54 mm | interior depth — 42 default (Hario), deeper for creped CAFEC papers |
-| `CLEAR_FRICTION` / `CLEAR_MAGNET` | 0.28 / 0.50 mm | lid clearance per side |
-| `POCKET_D` / `POCKET_DEPTH` | 6.4 / 3.2 mm | magnet pocket (for Ø6 × 3 magnets) |
+| `CLEAR_FRICTION` / `CLEAR_MAGNET` | 0.28 / 0.50 mm | lid clearance per side (also CLI flags — see [Fit tuning](#fit-tuning)) |
+| `LIP_CLEAR` | 0.5 mm | flat/pedestal lid alignment-lip clearance (also a CLI flag) |
+| `POCKET_D` / `POCKET_DEPTH` | 6.4 / 3.2 mm | magnet pocket (for Ø6 × 3 magnets; also CLI flags) |
 | `ENGRAVE_TEXT` / `ENGRAVE_WIDTH` / `ENGRAVE_DEPTH` | "Filtarr" / 60 / 0.6 mm | lid engraving |
 | `SCOOP_W` | 36 mm | finger scoop width (telescoping designs) |
 | `PEDESTAL_H` / `MOAT_W` | 8 / 15 mm | pedestal design: pedestal height / moat width (+ tab clearance) |

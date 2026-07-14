@@ -7,9 +7,13 @@
 #   make vendor     # fetch the latest three.js module build into vendor/
 #   make image      # (re)build the Docker build image
 #   make clean      # delete all generated outputs
+#
+# Fit tolerances can be overridden per run (see README -> Fit tuning):
+#   make generate GEN_ARGS="--clear-friction 0.32"
 
-IMAGE := filtarr-build
-RUN   := docker run --rm -v "$(CURDIR)":/app -w /app
+IMAGE    := filtarr-build
+RUN      := docker run --rm -v "$(CURDIR)":/app -w /app
+GEN_ARGS ?=
 
 .PHONY: all generate docs vendor image clean
 
@@ -19,7 +23,7 @@ image:
 	docker build -t $(IMAGE) .
 
 generate: image
-	$(RUN) $(IMAGE) python3 generate.py
+	$(RUN) $(IMAGE) python3 generate.py $(GEN_ARGS)
 
 docs: image
 	$(RUN) $(IMAGE) python3 tools/render_docs.py

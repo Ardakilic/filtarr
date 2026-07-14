@@ -298,7 +298,8 @@ function main(THREE) {
     $("subtitle").textContent = rest.join(" — ") || "filter paper case";
   }
   const ROWS = { paper: "Paper", interior: "Interior",
-                 closedH: "Closed height", magnets: "Magnets" };
+                 closedH: "Closed height", magnets: "Magnets",
+                 tolerances: "Tolerances" };
   $("dims").innerHTML = "<b>Dimensions</b>" +
     Object.entries(ROWS).filter(([k]) => DATA.dims[k])
       .map(([k, l]) => `<div>${l}: <strong>${DATA.dims[k]}</strong></div>`)

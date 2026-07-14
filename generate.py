@@ -32,12 +32,18 @@ three.js + base64 STLs, works offline from file://).
 
 Usage:
   pip install -r requirements.txt
-  python3 generate.py
+  python3 generate.py [tolerance overrides]
+
+Printer-fit tolerances are CLI flags (defaults in SHARED DESIGN PARAMETERS),
+so they can be tuned per printer without editing code — via make:
+`make generate GEN_ARGS="--clear-friction 0.32"`. Flags: --clear-friction,
+--clear-magnet, --lip-clear, --pocket-d, --pocket-depth.
 
 To add a new paper, add one PAPERS entry — see HOWTO.md.
 All dimensions are millimetres / degrees.
 """
 
+import argparse
 import base64
 import json
 import math
@@ -128,6 +134,8 @@ SKIRT_T = 2.0            # lid skirt wall thickness
 PLINTH = 3.0             # base rim left exposed below the closed lid (grip)
 LID_T_FRICTION = 2.4     # lid top plate thickness, friction design
 LID_T_MAGNET = 4.6       # thicker plate: hides the magnet pockets
+# Printer-fit tolerances — CLI-overridable (apply_tolerance_args), listed in
+# the previews' "Tolerances" row and in README -> Printing
 CLEAR_FRICTION = 0.28    # lid-to-base clearance per side, friction design
 CLEAR_MAGNET = 0.50      # loose glide fit — the magnets do the holding
 
@@ -562,7 +570,42 @@ class Case:
 # --------------------------------------------------------------------------
 
 
+def apply_tolerance_args(argv=None):
+    """Override the printer-fit tolerances from the command line, so fits can
+    be tuned per printer without editing code (make generate GEN_ARGS="...")."""
+    global CLEAR_FRICTION, CLEAR_MAGNET, LIP_CLEAR, POCKET_D, POCKET_DEPTH
+    p = argparse.ArgumentParser(
+        description="Generate all Filtarr STLs, previews and index.html.")
+    p.add_argument("--clear-friction", type=float, default=CLEAR_FRICTION,
+                   metavar="MM", help="friction lid clearance per side "
+                   f"(default {CLEAR_FRICTION}; tune in ±0.04 steps)")
+    p.add_argument("--clear-magnet", type=float, default=CLEAR_MAGNET,
+                   metavar="MM", help="magnet-skirt lid glide clearance per "
+                   f"side (default {CLEAR_MAGNET})")
+    p.add_argument("--lip-clear", type=float, default=LIP_CLEAR,
+                   metavar="MM", help="flat/pedestal lid alignment-lip "
+                   f"clearance per side (default {LIP_CLEAR})")
+    p.add_argument("--pocket-d", type=float, default=POCKET_D,
+                   metavar="MM", help="magnet pocket diameter "
+                   f"(default {POCKET_D}, for Ø6 mm discs)")
+    p.add_argument("--pocket-depth", type=float, default=POCKET_DEPTH,
+                   metavar="MM", help="magnet pocket depth "
+                   f"(default {POCKET_DEPTH}, for 3 mm thick discs)")
+    a = p.parse_args(argv)
+    CLEAR_FRICTION, CLEAR_MAGNET = a.clear_friction, a.clear_magnet
+    LIP_CLEAR, POCKET_D, POCKET_DEPTH = a.lip_clear, a.pocket_d, a.pocket_depth
+
+
+def tolerance_summary():
+    return (f"lid fit/side: friction {CLEAR_FRICTION:.2f}, skirt "
+            f"{CLEAR_MAGNET:.2f}, flat lip {LIP_CLEAR:.2f} mm; magnet pockets "
+            f"Ø{POCKET_D:.1f} x {POCKET_DEPTH:.1f} mm (Ø6x3 discs sit "
+            f"{POCKET_DEPTH - 3.0:.1f} mm recessed)")
+
+
 def main():
+    apply_tolerance_args()
+    print(f"tolerances — {tolerance_summary()}")
     cases = []
     for slug in PAPERS:
         case = Case(slug)
@@ -653,6 +696,10 @@ def build_preview(case, parts_world):
     if has_magnets:
         dims["magnets"] = (f"Ø6x3 mm discs — skirt: 8, flat/pedestal: 6; "
                            f"pockets {POCKET_D:.1f} x {POCKET_DEPTH:.1f} mm")
+    dims["tolerances"] = (f"lid fit/side: friction {CLEAR_FRICTION:.2f}, "
+                          f"skirt {CLEAR_MAGNET:.2f}, flat lip {LIP_CLEAR:.2f} mm"
+                          + (f"; magnets sit {POCKET_DEPTH - 3.0:.1f} mm recessed"
+                             if has_magnets else ""))
     mag_counts = {"magnet-skirt": 8, "magnet-flat": 6, "magnet-pedestal": 6}
     data = {
         "title": f"Filtarr — {case.cfg['display']}",

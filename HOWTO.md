@@ -58,6 +58,10 @@ make generate     # STLs + per-paper preview HTMLs
 make docs         # README images into <folder>/docs/
 ```
 
+Printer-fit tolerances (lid clearances, magnet pockets) can be overridden per
+run without touching code: `make generate GEN_ARGS="--clear-friction 0.32"` —
+see README → Fit tuning for the full flag list.
+
 Open the new preview in a browser and check with the **ghost paper stack**
 toggle that the paper (cream) has visible slack to the walls in every
 direction. `generate.py` prints each part's bounding box — make sure it fits

@@ -46,6 +46,7 @@ fonts-liberation + pip requirements):
 ```bash
 make              # generate + docs
 make generate     # all papers -> stl + previews + index.html (builds image first)
+make generate GEN_ARGS="--clear-friction 0.32"   # fit-tolerance overrides
 make docs         # -> <folder>/docs/*.png
 make vendor       # refresh both three.js files in vendor/ to the latest release
 make image        # (re)build the filtarr-build Docker image only
@@ -174,6 +175,13 @@ side so pairs never touch (controlled snap, one-hand open). Polarity is set at g
 time (README procedure). Pockets always open toward a print-top surface (no
 bridging): bases print upright, lids upside down (also makes the engraving crisp
 against the bed).
+
+Printer-fit tolerances (CLEAR_FRICTION 0.28, CLEAR_MAGNET 0.50, LIP_CLEAR 0.5,
+POCKET_D 6.4, POCKET_DEPTH 3.2) are argparse flags (`apply_tolerance_args` in
+generate.py, exposed as `make generate GEN_ARGS="--clear-friction 0.32"`) so
+fits can be tuned per printer without code edits — added 2026-07-12 for the
+user's friend who prints these. Previews list them in the Dimensions →
+Tolerances row; keep the README Printing bullet + Fit-tuning table in sync.
 
 Engraving: `ENGRAVE_TEXT` = "Filtarr" (the project/brand name), 0.6 mm deep
 (3 layers), 60 mm wide, centred at 0.7·R_INT on the bisector. Orientation is a
