@@ -136,6 +136,13 @@ the same design:
   (friction/skirt) to ~210 mm (flat/pedestal); the all-brands V60-02 needs a 220 mm
   bed.
 - **Material**: PLA or PETG, 0.4 mm nozzle, 0.2 mm layers, 3 perimeters, 10–15 % infill.
+- **Shell**: 2.0 mm walls and floor (5 perimeters / 10 layers with a 0.4 nozzle) and a
+  2.0 mm friction lid — sized to be rigid, not bulletproof. The magnet lids measure
+  4.6 mm at the edge, but that's not solid plastic: 3.2 mm of it is the magnet pocket
+  (leaving a 1.4 mm roof), and the underside is recessed to 2.4 mm everywhere except
+  the sealing rim, lip and pockets — so they print ~40 % lighter than they look.
+  Prefer other shells? `--wall-t` / `--floor-t` are flags — see
+  [Fit tuning](#fit-tuning).
 - **Tolerances** (as designed, for a calibrated printer): friction lid **0.28 mm**
   clearance per side (snug snap fit); magnet-skirt lid **0.50 mm** per side (loose
   glide — the magnets do the holding); flat/pedestal lid alignment lip **0.5 mm**
@@ -162,6 +169,7 @@ make generate GEN_ARGS="--clear-friction 0.32"
 | `--clear-magnet` | 0.50 mm | magnet-skirt lid glide clearance per side |
 | `--lip-clear` | 0.50 mm | flat/pedestal lid alignment-lip clearance per side |
 | `--pocket-d` / `--pocket-depth` | 6.4 / 3.2 mm | magnet pockets (for Ø6 × 3 mm discs) |
+| `--wall-t` / `--floor-t` | 2.0 / 2.0 mm | base shell thickness — 1.6 for ultralight, 2.4 for extra rigid |
 
 Quick alternative if only the friction lid is too tight/loose: scale the **lid
 only** by ∓0.2 % in XY in your slicer. Both magnetic closures are
@@ -207,6 +215,8 @@ Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 |---|---|---|
 | `PAPERS` | 5 entries | the paper registry (side / angle / tab clearance / designs) |
 | `DEPTH` / per-paper `depth` | 42 / 47 / 54 mm | interior depth — 42 default (Hario), deeper for creped CAFEC papers |
+| `WALL_T` / `FLOOR_T` | 2.0 / 2.0 mm | base shell (also CLI flags — see [Fit tuning](#fit-tuning)) |
+| `LID_T_FRICTION` / `LID_T_MAGNET` / `LID_CORE_T` | 2.0 / 4.6 / 2.4 mm | lid plates; magnet lids keep 4.6 only at rim & pockets, recessed to 2.4 elsewhere |
 | `CLEAR_FRICTION` / `CLEAR_MAGNET` | 0.28 / 0.50 mm | lid clearance per side (also CLI flags — see [Fit tuning](#fit-tuning)) |
 | `LIP_CLEAR` | 0.5 mm | flat/pedestal lid alignment-lip clearance (also a CLI flag) |
 | `POCKET_D` / `POCKET_DEPTH` | 6.4 / 3.2 mm | magnet pocket (for Ø6 × 3 magnets; also CLI flags) |

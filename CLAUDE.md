@@ -142,8 +142,14 @@ Cone with full apex angle A → flat sector `360·sin(A/2)`° → folded wedge
 
 Shared: interior = paper angle + 3° slack, R_INT = side + rounded-apex offset
 (`apex_tip_x`) + 3.5 slack + tab_extra; interior depth = per-paper `depth`
-(default `DEPTH` 42; Deep 27 & cup 1: 47, cup 4: 54); walls/floor 2.4; interior
-corners filleted r4 via `buffer(-r).buffer(r)`.
+(default `DEPTH` 42; Deep 27 & cup 1: 47, cup 4: 54); walls/floor 2.0
+(reduced from 2.4 on 2026-07-20 print feedback — "bulletproof"; friction lid
+plate also 2.4→2.0); interior corners filleted r4 via `buffer(-r).buffer(r)`.
+Magnet lids (skirt/flat/pedestal) keep `LID_T_MAGNET` 4.6 ONLY at the rim and
+pockets — the 4.6 is structural: 3.2 pocket + 1.4 roof, thinner would let the
+magnet pairs touch — and are recessed from below to `LID_CORE_T` 2.4 over the
+cavity (~40 % lid weight off; recess stops 2 mm inside the lip root so rim
+contact/dust seal is untouched).
 
 - **friction**: full-cover telescoping lid (skirt outside the base wall), clearance
   0.28/side; wide-end wall finger scoop (covered by the skirt when closed); skirt
@@ -177,11 +183,12 @@ bridging): bases print upright, lids upside down (also makes the engraving crisp
 against the bed).
 
 Printer-fit tolerances (CLEAR_FRICTION 0.28, CLEAR_MAGNET 0.50, LIP_CLEAR 0.5,
-POCKET_D 6.4, POCKET_DEPTH 3.2) are argparse flags (`apply_tolerance_args` in
-generate.py, exposed as `make generate GEN_ARGS="--clear-friction 0.32"`) so
-fits can be tuned per printer without code edits — added 2026-07-12 for the
-user's friend who prints these. Previews list them in the Dimensions →
-Tolerances row; keep the README Printing bullet + Fit-tuning table in sync.
+POCKET_D 6.4, POCKET_DEPTH 3.2) and shell thicknesses (WALL_T/FLOOR_T 2.0) are
+argparse flags (`apply_printer_args` in generate.py, exposed as
+`make generate GEN_ARGS="--clear-friction 0.32"` / `--wall-t 1.6`) so parts
+can be tuned per printer without code edits — added for the user's friend
+Kazım who prints these. Previews list them in the Dimensions → Tolerances and
+Shell rows; keep the README Printing bullets + Fit-tuning table in sync.
 
 Engraving: `ENGRAVE_TEXT` = "Filtarr" (the project/brand name), 0.6 mm deep
 (3 layers), 60 mm wide, centred at 0.7·R_INT on the bisector. Orientation is a
@@ -225,7 +232,12 @@ upright when the wedge TIP points at the reader (the `rotate(-90)` in
 - User: Arda (ardakilicdagi@gmail.com, GitHub `Ardakilic`); published as
   "Filtarr", dual-licensed MIT (code) + CC BY 4.0 (models & images).
 - Previews confirmed working in his browser after the r167 core-split fix.
-- Print feedback pending: friction-fit tolerance, magnet snap strength, scoop width.
+- First print feedback (2026-07-20, from his printing friend Kazım): shells felt
+  "bulletproof"/heavy → walls, floor and friction lid went 2.4→2.0 and magnet
+  lids got the LID_CORE_T underside recess. Kazım wanted everything ≤2 mm; the
+  magnet-lid rim can't (pocket 3.2 + roof 1.4 = 4.6, else magnets touch).
+- Still pending from real use: friction-fit tolerance, magnet snap strength,
+  scoop width.
 - Widest parts per paper (the pedestal design is always the largest): V60-02
   ~219 mm (needs a 220 bed), CAFEC cup 4 ~207 mm, V60-01 ~187 mm, CAFEC cup 1
   ~177 mm, Deep 27 ~182 mm (pedestal base; its other designs stay ~172, so only

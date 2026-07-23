@@ -34,10 +34,11 @@ Usage:
   pip install -r requirements.txt
   python3 generate.py [tolerance overrides]
 
-Printer-fit tolerances are CLI flags (defaults in SHARED DESIGN PARAMETERS),
-so they can be tuned per printer without editing code — via make:
-`make generate GEN_ARGS="--clear-friction 0.32"`. Flags: --clear-friction,
---clear-magnet, --lip-clear, --pocket-d, --pocket-depth.
+Printer-fit tolerances and shell thicknesses are CLI flags (defaults in
+SHARED DESIGN PARAMETERS), so they can be tuned per printer without editing
+code — via make: `make generate GEN_ARGS="--clear-friction 0.32"`. Flags:
+--clear-friction, --clear-magnet, --lip-clear, --pocket-d, --pocket-depth,
+--wall-t, --floor-t.
 
 To add a new paper, add one PAPERS entry — see HOWTO.md.
 All dimensions are millimetres / degrees.
@@ -124,16 +125,25 @@ ANGLE_SLACK = 3.0        # extra wedge angle so papers never wedge tight
 RADIAL_SLACK = 3.5       # extra length beyond the paper side
 INNER_ROUND = 4.0        # fillet radius of the interior corners
 
-WALL_T = 2.4             # base wall thickness
-FLOOR_T = 2.4            # base floor thickness
+# Shell thicknesses — "stable, not bulletproof" (print feedback 2026-07-20:
+# 2.4 shells felt tank-like). 2.0 = 5 perimeters with a 0.4 nozzle / 10 layers
+# at 0.2 mm; ~58 % of the 2.4 bending stiffness (t³), still rigid for a paper
+# box. CLI-overridable (--wall-t / --floor-t) for personal taste.
+WALL_T = 2.0             # base wall thickness
+FLOOR_T = 2.0            # base floor thickness
 DEPTH = 42.0             # default interior depth (fits 100 smooth Hario papers,
                          # measured stack ~32 mm); creped papers override per-paper
 
 # Telescoping designs (friction / magnet-skirt)
 SKIRT_T = 2.0            # lid skirt wall thickness
 PLINTH = 3.0             # base rim left exposed below the closed lid (grip)
-LID_T_FRICTION = 2.4     # lid top plate thickness, friction design
-LID_T_MAGNET = 4.6       # thicker plate: hides the magnet pockets
+LID_T_FRICTION = 2.0     # lid top plate thickness, friction design
+LID_T_MAGNET = 4.6       # magnet-lid plate at the rim & pockets — can't shrink:
+                         # 3.2 mm pocket + 1.4 mm roof (7 layers); any thinner
+                         # and the magnet pairs touch (hard clack, chip risk)
+LID_CORE_T = 2.4         # magnet lids are recessed from below to this over the
+                         # cavity — sheds ~40 % lid weight; full thickness stays
+                         # over the rim (dust contact), lip root and pockets
 # Printer-fit tolerances — CLI-overridable (apply_tolerance_args), listed in
 # the previews' "Tolerances" row and in README -> Printing
 CLEAR_FRICTION = 0.28    # lid-to-base clearance per side, friction design
@@ -507,6 +517,10 @@ class Case:
             solid = trimesh.boolean.union([plate, lip], check_volume=False)
             cutters = pocket_cutters(self.magnets_flat, top - 1.0,
                                      top + POCKET_DEPTH)
+            # lightening recess: thin the underside to LID_CORE_T over the
+            # cavity; rim contact, lip root and magnet pockets stay full
+            core = cavity.buffer(-(LIP_CLEAR + LIP_T + 2.0), quad_segs=QS)
+            cutters.append(prism(core, top - 1.0, top + plate_t - LID_CORE_T))
         else:
             top = self.base_h
             outer = inner.buffer(SKIRT_T, quad_segs=QS)
@@ -516,6 +530,10 @@ class Case:
                 # pockets rise into the lid plate from its underside
                 cutters += pocket_cutters(self.magnets_skirt, top - 1.0,
                                           top + POCKET_DEPTH)
+                # same lightening recess as the flat lids (plate is LID_T_MAGNET)
+                core = self.interior.buffer(-2.0, quad_segs=QS)
+                cutters.append(prism(core, top - 1.0,
+                                     top + plate_t - LID_CORE_T))
         if engraved:
             cutters += self.engrave_cutters(top + plate_t)
         return diff(solid, *cutters)
@@ -570,10 +588,12 @@ class Case:
 # --------------------------------------------------------------------------
 
 
-def apply_tolerance_args(argv=None):
-    """Override the printer-fit tolerances from the command line, so fits can
-    be tuned per printer without editing code (make generate GEN_ARGS="...")."""
+def apply_printer_args(argv=None):
+    """Override the printer-fit tolerances and shell thicknesses from the
+    command line, so parts can be tuned per printer/taste without editing code
+    (make generate GEN_ARGS="...")."""
     global CLEAR_FRICTION, CLEAR_MAGNET, LIP_CLEAR, POCKET_D, POCKET_DEPTH
+    global WALL_T, FLOOR_T
     p = argparse.ArgumentParser(
         description="Generate all Filtarr STLs, previews and index.html.")
     p.add_argument("--clear-friction", type=float, default=CLEAR_FRICTION,
@@ -591,9 +611,15 @@ def apply_tolerance_args(argv=None):
     p.add_argument("--pocket-depth", type=float, default=POCKET_DEPTH,
                    metavar="MM", help="magnet pocket depth "
                    f"(default {POCKET_DEPTH}, for 3 mm thick discs)")
+    p.add_argument("--wall-t", type=float, default=WALL_T, metavar="MM",
+                   help=f"base wall thickness (default {WALL_T}; "
+                   "1.6 = ultralight, 2.4 = extra rigid)")
+    p.add_argument("--floor-t", type=float, default=FLOOR_T, metavar="MM",
+                   help=f"base floor thickness (default {FLOOR_T})")
     a = p.parse_args(argv)
     CLEAR_FRICTION, CLEAR_MAGNET = a.clear_friction, a.clear_magnet
     LIP_CLEAR, POCKET_D, POCKET_DEPTH = a.lip_clear, a.pocket_d, a.pocket_depth
+    WALL_T, FLOOR_T = a.wall_t, a.floor_t
 
 
 def tolerance_summary():
@@ -603,9 +629,16 @@ def tolerance_summary():
             f"{POCKET_DEPTH - 3.0:.1f} mm recessed)")
 
 
+def shell_summary():
+    return (f"walls {WALL_T:.1f} / floor {FLOOR_T:.1f} mm; lid plates: "
+            f"friction {LID_T_FRICTION:.1f}, magnet {LID_T_MAGNET:.1f} at "
+            f"rim & pockets / {LID_CORE_T:.1f} core")
+
+
 def main():
-    apply_tolerance_args()
+    apply_printer_args()
     print(f"tolerances — {tolerance_summary()}")
+    print(f"shell — {shell_summary()}")
     cases = []
     for slug in PAPERS:
         case = Case(slug)
@@ -700,6 +733,7 @@ def build_preview(case, parts_world):
                           f"skirt {CLEAR_MAGNET:.2f}, flat lip {LIP_CLEAR:.2f} mm"
                           + (f"; magnets sit {POCKET_DEPTH - 3.0:.1f} mm recessed"
                              if has_magnets else ""))
+    dims["shell"] = shell_summary()
     mag_counts = {"magnet-skirt": 8, "magnet-flat": 6, "magnet-pedestal": 6}
     data = {
         "title": f"Filtarr — {case.cfg['display']}",

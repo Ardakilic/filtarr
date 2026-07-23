@@ -299,7 +299,7 @@ function main(THREE) {
   }
   const ROWS = { paper: "Paper", interior: "Interior",
                  closedH: "Closed height", magnets: "Magnets",
-                 tolerances: "Tolerances" };
+                 tolerances: "Tolerances", shell: "Shell" };
   $("dims").innerHTML = "<b>Dimensions</b>" +
     Object.entries(ROWS).filter(([k]) => DATA.dims[k])
       .map(([k, l]) => `<div>${l}: <strong>${DATA.dims[k]}</strong></div>`)
