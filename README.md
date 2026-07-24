@@ -136,13 +136,14 @@ the same design:
   (friction/skirt) to ~210 mm (flat/pedestal); the all-brands V60-02 needs a 220 mm
   bed.
 - **Material**: PLA or PETG, 0.4 mm nozzle, 0.2 mm layers, 3 perimeters, 10–15 % infill.
-- **Shell**: 2.0 mm walls and floor (5 perimeters / 10 layers with a 0.4 nozzle) and a
-  2.0 mm friction lid — sized to be rigid, not bulletproof. The magnet lids measure
-  4.6 mm at the edge, but that's not solid plastic: 3.2 mm of it is the magnet pocket
-  (leaving a 1.4 mm roof), and the underside is recessed to 2.4 mm everywhere except
-  the sealing rim, lip and pockets — so they print ~40 % lighter than they look.
-  Prefer other shells? `--wall-t` / `--floor-t` are flags — see
-  [Fit tuning](#fit-tuning).
+- **Shell**: 2.0 mm walls and floor (5 perimeters / 10 layers with a 0.4 nozzle),
+  2.0 mm friction lid, 1.6 mm telescoping lid skirts (a closed hoop, braced by the
+  base wall when closed) — sized to be rigid, not bulletproof. The magnet lids
+  measure 4.6 mm at the edge, but that's not solid plastic: 3.2 mm of it is the
+  magnet pocket (leaving a 1.4 mm roof), and the underside is recessed to 2.0 mm
+  everywhere except the sealing rim, lip and pockets — so they print ~45 % lighter
+  than they look. Prefer other shells? `--wall-t` / `--floor-t` / `--skirt-t` are
+  flags — see [Fit tuning](#fit-tuning).
 - **Tolerances** (as designed, for a calibrated printer): friction lid **0.28 mm**
   clearance per side (snug snap fit); magnet-skirt lid **0.50 mm** per side (loose
   glide — the magnets do the holding); flat/pedestal lid alignment lip **0.5 mm**
@@ -170,10 +171,29 @@ make generate GEN_ARGS="--clear-friction 0.32"
 | `--lip-clear` | 0.50 mm | flat/pedestal lid alignment-lip clearance per side |
 | `--pocket-d` / `--pocket-depth` | 6.4 / 3.2 mm | magnet pockets (for Ø6 × 3 mm discs) |
 | `--wall-t` / `--floor-t` | 2.0 / 2.0 mm | base shell thickness — 1.6 for ultralight, 2.4 for extra rigid |
+| `--skirt-t` | 1.6 mm | telescoping lid skirt thickness |
+| `--chamfer-bottom` | 2.0 mm | 45° chamfer at the pedestal's foot, in the moat — fades the shrink witness line on the base's underside (research says 1.5–3 mm is the useful range; it attenuates, not eliminates); `0` disables |
+| `--chamfer-side-wall` | 1.2 mm | 45° cove where the pedestal top meets the side walls/apex — softens the section-change ring and the sharp interior corner; keep small (papers sit close to the walls near the tip); `0` disables |
 
 Quick alternative if only the friction lid is too tight/loose: scale the **lid
 only** by ∓0.2 % in XY in your slicer. Both magnetic closures are
 tolerance-forgiving by design.
+
+**Shell presets.** The shipped STLs use the defaults above. To regenerate the
+original heavier, extra-rigid shells (as first published):
+
+```bash
+make generate GEN_ARGS="--wall-t 2.4 --floor-t 2.4 --skirt-t 2.0"
+```
+
+or an ultralight build (fine for a shelf queen, springier in the hand):
+
+```bash
+make generate GEN_ARGS="--wall-t 1.6 --floor-t 1.6"
+```
+
+(The lid plates aren't flagged: the friction plate is already minimal and the
+magnet-lid thickness is dictated by the magnet pockets.)
 
 ## Magnet assembly (all magnetic designs)
 
@@ -216,13 +236,14 @@ Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 | `PAPERS` | 5 entries | the paper registry (side / angle / tab clearance / designs) |
 | `DEPTH` / per-paper `depth` | 42 / 47 / 54 mm | interior depth — 42 default (Hario), deeper for creped CAFEC papers |
 | `WALL_T` / `FLOOR_T` | 2.0 / 2.0 mm | base shell (also CLI flags — see [Fit tuning](#fit-tuning)) |
-| `LID_T_FRICTION` / `LID_T_MAGNET` / `LID_CORE_T` | 2.0 / 4.6 / 2.4 mm | lid plates; magnet lids keep 4.6 only at rim & pockets, recessed to 2.4 elsewhere |
+| `LID_T_FRICTION` / `LID_T_MAGNET` / `LID_CORE_T` | 2.0 / 4.6 / 2.0 mm | lid plates; magnet lids keep 4.6 only at rim & pockets, recessed to 2.0 elsewhere |
 | `CLEAR_FRICTION` / `CLEAR_MAGNET` | 0.28 / 0.50 mm | lid clearance per side (also CLI flags — see [Fit tuning](#fit-tuning)) |
 | `LIP_CLEAR` | 0.5 mm | flat/pedestal lid alignment-lip clearance (also a CLI flag) |
 | `POCKET_D` / `POCKET_DEPTH` | 6.4 / 3.2 mm | magnet pocket (for Ø6 × 3 magnets; also CLI flags) |
 | `ENGRAVE_TEXT` / `ENGRAVE_WIDTH` / `ENGRAVE_DEPTH` | "Filtarr" / 60 / 0.6 mm | lid engraving |
 | `SCOOP_W` | 36 mm | finger scoop width (telescoping designs) |
 | `PEDESTAL_H` / `MOAT_W` | 8 / 15 mm | pedestal design: pedestal height / moat width (+ tab clearance) |
+| `PEDESTAL_CHAMFER_BOTTOM` / `PEDESTAL_CHAMFER_WALL` | 2.0 / 1.2 mm | pedestal foot chamfer / pedestal-top wall cove (both CLI flags; `0` disables) |
 | `BAY_W` / `BAY_D` | 34 / 12 mm | pedestal design: finger bay opening width / outward depth |
 
 The engraving font comes from `FONT_CANDIDATES`: Arial Bold where available, and

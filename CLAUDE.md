@@ -147,16 +147,25 @@ Shared: interior = paper angle + 3° slack, R_INT = side + rounded-apex offset
 plate also 2.4→2.0); interior corners filleted r4 via `buffer(-r).buffer(r)`.
 Magnet lids (skirt/flat/pedestal) keep `LID_T_MAGNET` 4.6 ONLY at the rim and
 pockets — the 4.6 is structural: 3.2 pocket + 1.4 roof, thinner would let the
-magnet pairs touch — and are recessed from below to `LID_CORE_T` 2.4 over the
-cavity (~40 % lid weight off; recess stops 2 mm inside the lip root so rim
-contact/dust seal is untouched).
+magnet pairs touch — and are recessed from below to `LID_CORE_T` 2.0 over the
+cavity (~45 % lid weight off; recess stops 2 mm inside the lip root so rim
+contact/dust seal is untouched). Lid skirts are `SKIRT_T` 1.6 (closed hoop +
+braced by the base wall when closed → thinner than free-standing walls is
+fine). Weight economics (why the pedestal plinth stays a solid slab): slicers
+print WALLS solid but fill SLABS at 10-15 % infill, so grams live in vertical
+surfaces — an STL-hollow ribbed plinth would print HEAVIER than the infilled
+solid one. Don't "optimize" slabs; thin walls instead.
 
 - **friction**: full-cover telescoping lid (skirt outside the base wall), clearance
   0.28/side; wide-end wall finger scoop (covered by the skirt when closed); skirt
   stops 3 mm above the table (`PLINTH`) + bottom-edge notches so the halves separate.
 - **magnet-skirt**: same shell, clearance 0.50 (glide fit), 4 magnet pairs in outward
-  wall lobes (2 on the arc at ±13°, 1 per straight side at 0.6·R_INT). Kept for A/B
-  testing, but the user prefers the flat style aesthetically.
+  wall lobes (2 on the arc at ±13°, 1 per straight side at 0.6·R_INT); lobes are
+  blended into the wall with the same `CORNER_BLEND_R` closing as the flat-lid
+  bulges (print feedback 2026-07-24: raw tangent lobes felt fragile, like pipes
+  glued on — the closing adds side gussets; the lid channel follows automatically
+  since it derives from `ext_skirt`). Kept for A/B testing, but the user prefers
+  the flat style aesthetically.
 - **magnet-flat**: user's preferred reference style (orange corner-magnet box /
   "MAG BOX" CAD image): flat 4.6 mm lay-on lid + 2.5 mm alignment lip, 3 magnet pairs
   in smoothly blended corner bulges (apex + both wide-end corners; centres found by
@@ -175,6 +184,25 @@ contact/dust seal is untouched).
   from below, down to the last paper. The interior is deepened by PEDESTAL_H,
   so headroom stays = per-paper depth (never squeezed) and the closed box is
   8 mm taller. Base is diff-then-union: cavity cut first, plinth unioned after.
+  The plinth carries TWO 45° chamfers (0.2 mm staircases — identical to what
+  the slicer would emit, so printability is unchanged; both CLI flags, 0
+  disables), softening the section changes that telegraph shrink witness
+  lines (print feedback 2026-07-24, Kazım — and researched sizing, do not
+  shrink them back: such transitions need 1.5–3 mm, sub-mm only addresses
+  elephant-foot, and even then they attenuate rather than eliminate — FDM
+  limit; slicer side helps: outer-wall-first, less solid infill):
+  `PEDESTAL_CHAMFER_BOTTOM` 2.0 (`--chamfer-bottom`) at the plinth foot in
+  the moat — fades the line on the base's UNDERSIDE; papers rest 8 mm above,
+  unaffected. MUST stay clipped to the cavity (∩ interior_ped): along the
+  straight sides the plinth boundary coincides with the walls and an
+  unclipped buffer pokes through them once > WALL_T (caught in a demo).
+  `PEDESTAL_CHAMFER_WALL` 1.2 (`--chamfer-side-wall`) is a cove where the
+  plinth TOP meets the side walls/apex (the user marked this corner on a
+  screenshot) — fades the ring where the slab's solid section ends. Clipped
+  to the plinth footprint (nothing may overhang the moat/bay). Kept small
+  DELIBERATELY: near the apex the papers' slack → 0, so a cove ≥ ~2 mm would
+  prop the bottom sheets' tip edges up; at 1.2 the contact is a ≤1.2 mm edge
+  kiss on the first ~45 mm from the tip — accepted by the user.
 
 Magnets: Ø6 × 3 mm discs (user owns these), pockets Ø6.4 × 3.2 → ~0.2 mm recess per
 side so pairs never touch (controlled snap, one-hand open). Polarity is set at glue
@@ -183,9 +211,9 @@ bridging): bases print upright, lids upside down (also makes the engraving crisp
 against the bed).
 
 Printer-fit tolerances (CLEAR_FRICTION 0.28, CLEAR_MAGNET 0.50, LIP_CLEAR 0.5,
-POCKET_D 6.4, POCKET_DEPTH 3.2) and shell thicknesses (WALL_T/FLOOR_T 2.0) are
-argparse flags (`apply_printer_args` in generate.py, exposed as
-`make generate GEN_ARGS="--clear-friction 0.32"` / `--wall-t 1.6`) so parts
+POCKET_D 6.4, POCKET_DEPTH 3.2) and shell thicknesses (WALL_T/FLOOR_T 2.0,
+SKIRT_T 1.6) are argparse flags (`apply_printer_args` in generate.py, exposed
+as `make generate GEN_ARGS="--clear-friction 0.32"` / `--wall-t 1.6`) so parts
 can be tuned per printer without code edits — added for the user's friend
 Kazım who prints these. Previews list them in the Dimensions → Tolerances and
 Shell rows; keep the README Printing bullets + Fit-tuning table in sync.

@@ -13,6 +13,6 @@ Instructions for AI coding agents working in this repo live in
   `make generate GEN_ARGS="--clear-friction 0.32"` or `--wall-t 1.6` (full
   table in README → Fit tuning; shown in each preview's Dimensions panel).
   The magnet lids' 4.6 mm is fixed by the pocket depth (3.2) + roof (1.4);
-  their undersides are recessed to 2.4 mm instead — don't "fix" the 4.6.
+  their undersides are recessed to 2.0 mm instead — don't "fix" the 4.6.
 - Keep README (supported-papers table, gallery, tolerances), HOWTO.md and
   CLAUDE.md in sync with the `PAPERS` registry in `generate.py`.

@@ -38,7 +38,7 @@ Printer-fit tolerances and shell thicknesses are CLI flags (defaults in
 SHARED DESIGN PARAMETERS), so they can be tuned per printer without editing
 code — via make: `make generate GEN_ARGS="--clear-friction 0.32"`. Flags:
 --clear-friction, --clear-magnet, --lip-clear, --pocket-d, --pocket-depth,
---wall-t, --floor-t.
+--wall-t, --floor-t, --skirt-t, --chamfer-bottom, --chamfer-side-wall.
 
 To add a new paper, add one PAPERS entry — see HOWTO.md.
 All dimensions are millimetres / degrees.
@@ -135,15 +135,18 @@ DEPTH = 42.0             # default interior depth (fits 100 smooth Hario papers,
                          # measured stack ~32 mm); creped papers override per-paper
 
 # Telescoping designs (friction / magnet-skirt)
-SKIRT_T = 2.0            # lid skirt wall thickness
+SKIRT_T = 1.6            # lid skirt wall thickness — 4 perimeters; a closed
+                         # hoop ring, and braced by the base wall when closed,
+                         # so it can run thinner than the free-standing walls
 PLINTH = 3.0             # base rim left exposed below the closed lid (grip)
 LID_T_FRICTION = 2.0     # lid top plate thickness, friction design
 LID_T_MAGNET = 4.6       # magnet-lid plate at the rim & pockets — can't shrink:
                          # 3.2 mm pocket + 1.4 mm roof (7 layers); any thinner
                          # and the magnet pairs touch (hard clack, chip risk)
-LID_CORE_T = 2.4         # magnet lids are recessed from below to this over the
-                         # cavity — sheds ~40 % lid weight; full thickness stays
-                         # over the rim (dust contact), lip root and pockets
+LID_CORE_T = 2.0         # magnet lids are recessed from below to this over the
+                         # cavity (= LID_T_FRICTION; engraving leaves 1.4) —
+                         # sheds ~45 % lid weight; full thickness stays over
+                         # the rim (dust contact), lip root and pockets
 # Printer-fit tolerances — CLI-overridable (apply_tolerance_args), listed in
 # the previews' "Tolerances" row and in README -> Printing
 CLEAR_FRICTION = 0.28    # lid-to-base clearance per side, friction design
@@ -189,6 +192,19 @@ BAY_W = 34.0             # bay opening width along the wide-end arc
 BAY_D = 12.0             # bay depth outward beyond the interior wall
 PEDESTAL_H = 8.0         # pedestal height — enough to get a fingertip under
 MOAT_W = 15.0            # pedestal setback from the arc wall (+ tab_extra)
+# Two 45° chamfers soften the pedestal's abrupt section changes, which
+# telegraph shrink witness lines through the shell (print feedback; researched
+# sizing: such transitions need 1.5-3 mm — sub-mm only fixes elephant-foot —
+# and they fade rather than vanish, an FDM limit). Both are CLI flags; 0 = off.
+PEDESTAL_CHAMFER_BOTTOM = 2.0  # at the pedestal's foot, in the moat: softens
+                               # the line on the base's UNDERSIDE. Papers rest
+                               # on the pedestal top 8 mm above — never touched.
+PEDESTAL_CHAMFER_WALL = 1.2    # cove where the pedestal TOP meets the side
+                               # walls/apex: softens the ring where the slab's
+                               # solid section ends + kills the sharp interior
+                               # corner. Kept small on purpose: papers can sit
+                               # within ~1 mm of the walls near the tip, so a
+                               # bigger cove would prop their edges up.
 
 # Engraving (lid top face). Upright when the tip of the wedge points at you.
 ENGRAVE_TEXT = "Filtarr"
@@ -229,6 +245,12 @@ def prism(poly, z0, z1):
     m = trimesh.creation.extrude_polygon(poly, z1 - z0)
     m.apply_translation([0.0, 0.0, z0])
     return m
+
+
+def poly_parts(geom):
+    """Polygons of a (possibly Multi-) polygon, skipping empties."""
+    parts = list(geom.geoms) if hasattr(geom, "geoms") else [geom]
+    return [p for p in parts if p.geom_type == "Polygon" and not p.is_empty]
 
 
 def diff(solid, *cutters):
@@ -310,9 +332,17 @@ class Case:
         self.magnets_skirt = self._skirt_magnet_centres()
         self.magnets_flat = self._flat_magnet_centres()
 
-        self.ext_skirt = unary_union(
-            [self.ext_plain]
-            + [Point(c).buffer(LOBE_R, quad_segs=QS) for c in self.magnets_skirt]
+        # lobes get the same closing as the flat-lid corner bulges: the concave
+        # cusps where a raw circle meets the wall are filled with smooth
+        # gussets (print feedback: unblended lobes felt like pipes glued on)
+        self.ext_skirt = (
+            unary_union(
+                [self.ext_plain]
+                + [Point(c).buffer(LOBE_R, quad_segs=QS)
+                   for c in self.magnets_skirt]
+            )
+            .buffer(CORNER_BLEND_R, quad_segs=QS)
+            .buffer(-CORNER_BLEND_R, quad_segs=QS)
         )
         # corner bulges blended smooth with a morphological closing (dilate+erode)
         self.ext_flat = (
@@ -488,9 +518,41 @@ class Case:
                                  self.base_h_ped + 1.0))
             tray = diff(solid, *cutters)
             # pedestal added after the cavity cut; the moat keeps floor level
-            return trimesh.boolean.union(
-                [tray, prism(self.plinth, FLOOR_T - 1.0, FLOOR_T + PEDESTAL_H)],
-                check_volume=False)
+            parts = [tray, prism(self.plinth, FLOOR_T - 1.0,
+                                 FLOOR_T + PEDESTAL_H)]
+            # Both chamfers are 0.2 mm staircases (what the slicer would emit
+            # for a smooth 45° face anyway), so printability is untouched.
+            if PEDESTAL_CHAMFER_BOTTOM > 0.0:
+                # foot chamfer in the moat: the floor->plinth section change
+                # becomes gradual instead of a one-layer step. Clipped to the
+                # cavity: along the straight sides the plinth boundary
+                # coincides with the interior walls, and an unclipped buffer
+                # would poke through them (visible outside) once > WALL_T.
+                c = PEDESTAL_CHAMFER_BOTTOM
+                n = max(1, math.ceil(c / 0.2))
+                h = c / n
+                for k in range(n):
+                    ring = (self.plinth.buffer(c - k * h, quad_segs=QS)
+                            .intersection(self.interior_ped))
+                    parts += [prism(p, FLOOR_T - 0.5, FLOOR_T + (k + 1) * h)
+                              for p in poly_parts(ring)]
+            if PEDESTAL_CHAMFER_WALL > 0.0:
+                # cove where the pedestal top meets the side walls/apex —
+                # smooths the ring where the slab's solid section ends and
+                # opens up the sharp interior corner. Clipped to the plinth
+                # footprint so nothing overhangs the moat/bay unsupported.
+                s = PEDESTAL_CHAMFER_WALL
+                n = max(1, math.ceil(s / 0.2))
+                h = s / n
+                ped_top = FLOOR_T + PEDESTAL_H
+                for k in range(n):
+                    band = (self.interior_ped.difference(
+                                self.interior_ped.buffer(-(s - k * h),
+                                                         quad_segs=QS))
+                            .intersection(self.plinth))
+                    parts += [prism(p, ped_top - 0.5, ped_top + (k + 1) * h)
+                              for p in poly_parts(band)]
+            return trimesh.boolean.union(parts, check_volume=False)
         cutters.append(prism(self.interior, FLOOR_T, self.base_h + 1.0))
         return diff(solid, *cutters)
 
@@ -593,7 +655,8 @@ def apply_printer_args(argv=None):
     command line, so parts can be tuned per printer/taste without editing code
     (make generate GEN_ARGS="...")."""
     global CLEAR_FRICTION, CLEAR_MAGNET, LIP_CLEAR, POCKET_D, POCKET_DEPTH
-    global WALL_T, FLOOR_T
+    global WALL_T, FLOOR_T, SKIRT_T
+    global PEDESTAL_CHAMFER_BOTTOM, PEDESTAL_CHAMFER_WALL
     p = argparse.ArgumentParser(
         description="Generate all Filtarr STLs, previews and index.html.")
     p.add_argument("--clear-friction", type=float, default=CLEAR_FRICTION,
@@ -616,10 +679,25 @@ def apply_printer_args(argv=None):
                    "1.6 = ultralight, 2.4 = extra rigid)")
     p.add_argument("--floor-t", type=float, default=FLOOR_T, metavar="MM",
                    help=f"base floor thickness (default {FLOOR_T})")
+    p.add_argument("--skirt-t", type=float, default=SKIRT_T, metavar="MM",
+                   help=f"telescoping lid skirt thickness (default {SKIRT_T})")
+    p.add_argument("--chamfer-bottom", type=float,
+                   default=PEDESTAL_CHAMFER_BOTTOM, metavar="MM",
+                   help="45° chamfer at the pedestal's foot (in the moat), "
+                   "softens the shrink line on the base underside "
+                   f"(default {PEDESTAL_CHAMFER_BOTTOM}; 0 disables)")
+    p.add_argument("--chamfer-side-wall", type=float,
+                   default=PEDESTAL_CHAMFER_WALL, metavar="MM",
+                   help="45° cove where the pedestal top meets the side "
+                   "walls/apex (default "
+                   f"{PEDESTAL_CHAMFER_WALL}; 0 disables; keep small — "
+                   "papers sit close to the walls near the tip)")
     a = p.parse_args(argv)
     CLEAR_FRICTION, CLEAR_MAGNET = a.clear_friction, a.clear_magnet
     LIP_CLEAR, POCKET_D, POCKET_DEPTH = a.lip_clear, a.pocket_d, a.pocket_depth
-    WALL_T, FLOOR_T = a.wall_t, a.floor_t
+    WALL_T, FLOOR_T, SKIRT_T = a.wall_t, a.floor_t, a.skirt_t
+    PEDESTAL_CHAMFER_BOTTOM = a.chamfer_bottom
+    PEDESTAL_CHAMFER_WALL = a.chamfer_side_wall
 
 
 def tolerance_summary():
@@ -630,9 +708,13 @@ def tolerance_summary():
 
 
 def shell_summary():
-    return (f"walls {WALL_T:.1f} / floor {FLOOR_T:.1f} mm; lid plates: "
-            f"friction {LID_T_FRICTION:.1f}, magnet {LID_T_MAGNET:.1f} at "
-            f"rim & pockets / {LID_CORE_T:.1f} core")
+    s = (f"walls {WALL_T:.1f} / floor {FLOOR_T:.1f} / lid skirts "
+         f"{SKIRT_T:.1f} mm; lid plates: friction {LID_T_FRICTION:.1f}, "
+         f"magnet {LID_T_MAGNET:.1f} at rim & pockets / {LID_CORE_T:.1f} core")
+    if PEDESTAL_CHAMFER_BOTTOM > 0.0 or PEDESTAL_CHAMFER_WALL > 0.0:
+        s += (f"; pedestal chamfers: foot {PEDESTAL_CHAMFER_BOTTOM:.1f} / "
+              f"wall cove {PEDESTAL_CHAMFER_WALL:.1f}")
+    return s
 
 
 def main():
