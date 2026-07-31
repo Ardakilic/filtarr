@@ -50,7 +50,8 @@ papers upside down balances the pile (the wedge is symmetric).
 | Lid style | full-cover telescoping lid | full-cover telescoping lid | flat lay-on lid, MAG-BOX style | flat lay-on lid, MAG-BOX style |
 | Closure | snug fit (0.28 mm/side) | loose glide + 4 magnet pairs | 3 magnet pairs in the corners | 3 magnet pairs in the corners |
 | Magnets needed | none | 8× Ø6 × 3 mm | 6× Ø6 × 3 mm | 6× Ø6 × 3 mm |
-| Paper access | finger scoop in the wide-end wall | finger scoop in the wide-end wall | whole top opens; pry slot under the lid edge | finger bay + moat: pinch one sheet from under its edge |
+| Paper access | finger scoop in the wide-end wall | finger scoop in the wide-end wall (shorter — it rides above the thumb notch) | whole top opens; pry slot under the lid edge | finger bay + moat: pinch one sheet from under its edge |
+| Opening grip | 2 side notches + 3 mm rim | 2 side notches **+ back thumb notch** — push its ledge up, the arc magnets peel first | pry slot under the lid edge, mid-arc | pry slot on the finger bay's face |
 | Character | no hardware at all | most dust-proof magnetic option | simplest, lightest lid, one-hand open | easiest paper picking, 8 mm taller |
 
 **Why the pedestal design?** With a flat lid the whole top opens, but sliding a single
@@ -62,10 +63,15 @@ paper edge — tab included — overhangs a moat. A full-height finger bay bulge
 under the overhanging edge and pinch out one sheet, down to the very last paper. The
 interior is 8 mm deeper, so the 100-pack keeps its full never-squeezed headroom.
 
-Shared features: finger scoop (telescoping designs) reaching to 8 mm above the floor,
-fully covered when closed; grip notches and a 3 mm exposed base rim so the telescoping
-halves separate easily; an alignment lip on the flat lids so they can't slide sideways;
-no supports needed in the exported print orientation.
+Shared features: finger scoop (telescoping designs), fully covered when closed —
+reaching to 8 mm above the floor on the friction design, while the magnet-skirt
+scoop is shorter, its bottom riding a 6 mm solid band above the back thumb notch.
+Grip notches and a 3 mm exposed base rim let the telescoping halves separate: both
+lids have one notch per straight side, and the magnet-skirt lid adds a 24 mm thumb
+notch mid-arc — push its ramped ledge up until the arc magnet pair clicks free,
+then lift (peeling one magnet pair at a time needs far less force than pulling all
+four at once). An alignment lip on the flat lids so they can't slide sideways; no
+supports needed in the exported print orientation.
 
 ## Gallery
 
@@ -172,6 +178,12 @@ make generate GEN_ARGS="--clear-friction 0.32"
 | `--pocket-d` / `--pocket-depth` | 6.4 / 3.2 mm | magnet pockets (for Ø6 × 3 mm discs) |
 | `--wall-t` / `--floor-t` | 2.0 / 2.0 mm | base shell thickness — 1.6 for ultralight, 2.4 for extra rigid |
 | `--skirt-t` | 1.6 mm | telescoping lid skirt thickness |
+| `--notch-w` / `--notch-h` | 22 / 10 mm | side grip notches on the telescoping lids (width / height above the 3 mm rim) |
+| `--arc-notch-w` / `--arc-notch-h` | 24 / 10 mm | magnet-skirt back thumb notch — sized for a thumb (ANSUR anthropometry); widths that reach the arc magnet channels are rejected with the per-paper safe limit |
+| `--arc-notch-gap` | 6.0 mm | solid wall band between the back notch top and the magnet-skirt scoop bottom (hard minimum 0.8 — the dust seal) |
+| `--arc-notch-chamfer` | 1.0 mm | ramped ceiling of the back notch, so the thumb meets a slope instead of the 1.6 mm skirt edge; `0` = square |
+| `--scoop-w` | 36 mm | finger scoop width (both telescoping designs) |
+| `--scoop-above-floor` | 8 mm | friction scoop bottom above the interior floor (the magnet-skirt scoop derives from the back notch instead) |
 | `--chamfer-bottom` | 2.0 mm | 45° chamfer at the pedestal's foot, in the moat — fades the shrink witness line on the base's underside (research says 1.5–3 mm is the useful range; it attenuates, not eliminates); `0` disables |
 | `--chamfer-side-wall` | 1.2 mm | 45° cove where the pedestal top meets the side walls/apex — softens the section-change ring and the sharp interior corner; keep small (papers sit close to the walls near the tip); `0` disables |
 
@@ -241,7 +253,9 @@ Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 | `LIP_CLEAR` | 0.5 mm | flat/pedestal lid alignment-lip clearance (also a CLI flag) |
 | `POCKET_D` / `POCKET_DEPTH` | 6.4 / 3.2 mm | magnet pocket (for Ø6 × 3 magnets; also CLI flags) |
 | `ENGRAVE_TEXT` / `ENGRAVE_WIDTH` / `ENGRAVE_DEPTH` | "Filtarr" / 60 / 0.6 mm | lid engraving |
-| `SCOOP_W` | 36 mm | finger scoop width (telescoping designs) |
+| `SCOOP_W` / `SCOOP_ABOVE_FLOOR` | 36 / 8 mm | finger scoop width / friction scoop bottom above the floor (both CLI flags) |
+| `NOTCH_W` / `NOTCH_H` | 22 / 10 mm | side grip notches on the telescoping lids (CLI flags) |
+| `ARC_NOTCH_W` / `ARC_NOTCH_H` / `ARC_NOTCH_GAP` | 24 / 10 / 6 mm | magnet-skirt back thumb notch + solid band to its (derived) scoop — all CLI flags, see [Fit tuning](#fit-tuning) |
 | `PEDESTAL_H` / `MOAT_W` | 8 / 15 mm | pedestal design: pedestal height / moat width (+ tab clearance) |
 | `PEDESTAL_CHAMFER_BOTTOM` / `PEDESTAL_CHAMFER_WALL` | 2.0 / 1.2 mm | pedestal foot chamfer / pedestal-top wall cove (both CLI flags; `0` disables) |
 | `BAY_W` / `BAY_D` | 34 / 12 mm | pedestal design: finger bay opening width / outward depth |

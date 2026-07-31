@@ -38,7 +38,9 @@ Printer-fit tolerances and shell thicknesses are CLI flags (defaults in
 SHARED DESIGN PARAMETERS), so they can be tuned per printer without editing
 code — via make: `make generate GEN_ARGS="--clear-friction 0.32"`. Flags:
 --clear-friction, --clear-magnet, --lip-clear, --pocket-d, --pocket-depth,
---wall-t, --floor-t, --skirt-t, --chamfer-bottom, --chamfer-side-wall.
+--wall-t, --floor-t, --skirt-t, --chamfer-bottom, --chamfer-side-wall,
+--notch-w, --notch-h, --arc-notch-w, --arc-notch-h, --arc-notch-gap,
+--arc-notch-chamfer, --scoop-w, --scoop-above-floor.
 
 To add a new paper, add one PAPERS entry — see HOWTO.md.
 All dimensions are millimetres / degrees.
@@ -153,7 +155,10 @@ CLEAR_FRICTION = 0.28    # lid-to-base clearance per side, friction design
 CLEAR_MAGNET = 0.50      # loose glide fit — the magnets do the holding
 
 # Finger scoop cut into the wide-end wall (friction / magnet-skirt bases;
-# covered by the skirt when closed, so it stays dust-proof)
+# covered by the skirt when closed, so it stays dust-proof).
+# SCOOP_ABOVE_FLOOR positions the friction scoop only: the magnet-skirt
+# scoop bottom is derived as back-notch top + ARC_NOTCH_GAP (see below), so
+# that scoop is shorter and always clears the notch.
 SCOOP_W = 36.0
 SCOOP_R = 14.0           # corner radius of the scoop
 SCOOP_ABOVE_FLOOR = 8.0  # scoop bottom height above the interior floor
@@ -163,6 +168,28 @@ NOTCH_W = 22.0
 NOTCH_H = 10.0
 NOTCH_R = 6.0
 NOTCH_FRAC = 0.36        # notch position along the straight sides, × R_INT
+# Third notch mid-arc, magnet-skirt lid only (use feedback 2026-08-01: with
+# four magnet pairs — 25-30 N, right at weak-user pinch strength — the two
+# side pinches aren't enough to break the lid free): a thumb push-up ledge at
+# the back. Fingers pinch the side notches, the thumb pushes this edge up,
+# peeling the arc magnet pair first ("push until it clicks free, then lift" —
+# the 0.50 glide fit binds after ~2° of tilt, already enough to break a Ø6x3
+# pair). Sized from ANSUR thumb breadth (18.6 F/P5 – 26.4 M/P95): the thumb
+# bears on the FLAT ledge W − 2r, so the radius stays smaller than NOTCH_R —
+# 24/r4 = 16 mm flat, more than either 22/r6 or 26/r6 would give. The scoop
+# behind is a through-cut, so notch and scoop must never overlap (dust
+# slit): on this design the scoop bottom is DERIVED as notch top +
+# ARC_NOTCH_GAP — the scoop rides above the notch by construction (preview
+# feedback 2026-08-01: v1 instead squeezed the notch under a full-depth
+# scoop, leaving a cramped 6 mm window and a 1 mm sliver between the two
+# openings).
+ARC_NOTCH_W = 24.0
+ARC_NOTCH_H = 10.0       # window height above the plinth (= NOTCH_H)
+ARC_NOTCH_R = 4.0        # smaller corner radius = longer flat thumb ledge
+ARC_NOTCH_GAP = 6.0      # solid wall band between notch top and scoop bottom
+ARC_NOTCH_CHAMFER = 1.0  # ceiling ramp: outer-face edge sits this far below
+                         # the top, rising to it at the inner face — the
+                         # thumb meets a ramp, not a 1.6 mm knife edge
 
 # Magnets: 6 mm diameter x 3 mm thick discs, glued into blind pockets
 POCKET_D = 6.4           # pocket diameter (0.4 mm glue/fit allowance)
@@ -263,6 +290,10 @@ def slot_cutter(width, z0, z1, corner_r, centre_xy, normal_deg, span):
     The profile lives in the (tangent, z) plane and is extruded `span` mm
     along the horizontal outward normal, centred on `centre_xy`.
     """
+    # a corner_r >= half the profile's short side would erode the box to an
+    # empty polygon and surface as an opaque trimesh error far from the cause
+    # (hit when --floor-t overrides shrank the arc notch profile): clamp it
+    corner_r = min(corner_r, width / 2.0 - 0.25, (z1 - z0) / 2.0 - 0.25)
     prof = (
         shp_box(-width / 2.0, z0, width / 2.0, z1)
         .buffer(-corner_r, quad_segs=16)
@@ -427,12 +458,15 @@ class Case:
 
     # -- cutters ---------------------------------------------------------------
 
-    def scoop_cutter(self):
-        return slot_cutter(SCOOP_W, FLOOR_T + SCOOP_ABOVE_FLOOR,
-                           self.base_h + 40.0, SCOOP_R,
+    @property
+    def arc_notch_top(self):
+        return PLINTH + ARC_NOTCH_H
+
+    def scoop_cutter(self, bottom):
+        return slot_cutter(SCOOP_W, bottom, self.base_h + 40.0, SCOOP_R,
                            (self.r_int, 0.0), 0.0, 60.0)
 
-    def notch_cutters(self):
+    def notch_cutters(self, arc_notch=False):
         """Grip notches at the bottom edge of the telescoping lids."""
         out = []
         notch_r = NOTCH_FRAC * self.r_int
@@ -444,6 +478,40 @@ class Case:
             out.append(
                 slot_cutter(NOTCH_W, PLINTH - 6.0, PLINTH + NOTCH_H, NOTCH_R,
                             (px, py), nrm_deg, 24.0))
+        if arc_notch:
+            # mid-arc thumb ledge — magnet-skirt only, deliberately: the
+            # friction lid has no magnet pairs to peel and opens by
+            # pinch-and-wiggle from its two side notches. Two cutters: a
+            # straight slot to z_top - chamfer, then a tilted copy whose top
+            # face ramps from z_top at the skirt's inner face down-and-out
+            # (in the lid's print orientation the ramp faces up — no
+            # overhang). The scoop bottom sits ARC_NOTCH_GAP above z_top by
+            # construction (build_base), so the ramp's ~0.4 mm flank rise
+            # from pivoting about the mid-arc chord never nears the void.
+            # Guard: a too-wide --arc-notch-w would open the window straight
+            # into the arc-lobe magnet channels while every mesh stays
+            # watertight, so nothing downstream would catch it.
+            chan = self.ext_skirt.buffer(CLEAR_MAGNET, quad_segs=QS).difference(
+                self.ext_plain.buffer(CLEAR_MAGNET, quad_segs=QS))
+            fp = shp_box(self.r_int - 15.0, -ARC_NOTCH_W / 2.0,
+                         self.r_int + 15.0, ARC_NOTCH_W / 2.0)
+            clr = fp.distance(chan)
+            if clr < 1.5:
+                raise ValueError(
+                    f"{self.slug}: --arc-notch-w {ARC_NOTCH_W:g} leaves "
+                    f"only {clr:.2f} mm to the arc magnet channel "
+                    "(need >= 1.5) — narrow the back notch")
+            z_top = self.arc_notch_top
+            out.append(
+                slot_cutter(ARC_NOTCH_W, PLINTH - 6.0,
+                            z_top - ARC_NOTCH_CHAMFER, ARC_NOTCH_R,
+                            (self.r_int, 0.0), 0.0, 30.0))
+            ramp = slot_cutter(ARC_NOTCH_W, PLINTH - 6.0, z_top, ARC_NOTCH_R,
+                               (self.r_int, 0.0), 0.0, 30.0)
+            ramp.apply_transform(trimesh.transformations.rotation_matrix(
+                math.atan2(ARC_NOTCH_CHAMFER, SKIRT_T), [0.0, 1.0, 0.0],
+                [self.r_int + WALL_T + CLEAR_MAGNET, 0.0, z_top]))
+            out.append(ramp)
         return out
 
     def pry_cutter(self, cx, top):
@@ -499,10 +567,13 @@ class Case:
     def build_base(self, design):
         if design == "friction":
             solid = prism(self.ext_plain, 0.0, self.base_h)
-            cutters = [self.scoop_cutter()]
+            cutters = [self.scoop_cutter(FLOOR_T + SCOOP_ABOVE_FLOOR)]
         elif design == "magnet-skirt":
             solid = prism(self.ext_skirt, 0.0, self.base_h)
-            cutters = [self.scoop_cutter()] + pocket_cutters(
+            # shorter scoop, riding above the back notch: a solid wall band
+            # of ARC_NOTCH_GAP separates the two openings
+            cutters = [self.scoop_cutter(
+                self.arc_notch_top + ARC_NOTCH_GAP)] + pocket_cutters(
                 self.magnets_skirt, self.base_h - POCKET_DEPTH, self.base_h + 1.0)
         elif design == "magnet-flat":  # no through-scoop (the whole top opens)
             solid = prism(self.ext_flat, 0.0, self.base_h)
@@ -587,7 +658,8 @@ class Case:
             top = self.base_h
             outer = inner.buffer(SKIRT_T, quad_segs=QS)
             solid = prism(outer, PLINTH, top + plate_t)
-            cutters = [prism(inner, PLINTH - 1.0, top)] + self.notch_cutters()
+            cutters = [prism(inner, PLINTH - 1.0, top)] + self.notch_cutters(
+                arc_notch=(design == "magnet-skirt"))
             if design == "magnet-skirt":
                 # pockets rise into the lid plate from its underside
                 cutters += pocket_cutters(self.magnets_skirt, top - 1.0,
@@ -657,6 +729,8 @@ def apply_printer_args(argv=None):
     global CLEAR_FRICTION, CLEAR_MAGNET, LIP_CLEAR, POCKET_D, POCKET_DEPTH
     global WALL_T, FLOOR_T, SKIRT_T
     global PEDESTAL_CHAMFER_BOTTOM, PEDESTAL_CHAMFER_WALL
+    global NOTCH_W, NOTCH_H, ARC_NOTCH_W, ARC_NOTCH_H, ARC_NOTCH_GAP
+    global ARC_NOTCH_CHAMFER, SCOOP_W, SCOOP_ABOVE_FLOOR
     p = argparse.ArgumentParser(
         description="Generate all Filtarr STLs, previews and index.html.")
     p.add_argument("--clear-friction", type=float, default=CLEAR_FRICTION,
@@ -692,12 +766,47 @@ def apply_printer_args(argv=None):
                    "walls/apex (default "
                    f"{PEDESTAL_CHAMFER_WALL}; 0 disables; keep small — "
                    "papers sit close to the walls near the tip)")
+    grip = p.add_argument_group("grip geometry (telescoping designs)")
+    grip.add_argument("--notch-w", type=float, default=NOTCH_W, metavar="MM",
+                      help=f"side grip notch width (default {NOTCH_W})")
+    grip.add_argument("--notch-h", type=float, default=NOTCH_H, metavar="MM",
+                      help="side grip notch height above the plinth "
+                      f"(default {NOTCH_H})")
+    grip.add_argument("--arc-notch-w", type=float, default=ARC_NOTCH_W,
+                      metavar="MM", help="magnet-skirt back thumb notch "
+                      f"width (default {ARC_NOTCH_W})")
+    grip.add_argument("--arc-notch-h", type=float, default=ARC_NOTCH_H,
+                      metavar="MM", help="back thumb notch height above the "
+                      f"plinth (default {ARC_NOTCH_H})")
+    grip.add_argument("--arc-notch-gap", type=float, default=ARC_NOTCH_GAP,
+                      metavar="MM", help="solid wall band between the back "
+                      "notch top and the magnet-skirt scoop bottom "
+                      f"(default {ARC_NOTCH_GAP}; keep >= 1.5 so the dust "
+                      "seal survives print variance)")
+    grip.add_argument("--arc-notch-chamfer", type=float,
+                      default=ARC_NOTCH_CHAMFER, metavar="MM",
+                      help="back notch ceiling ramp depth "
+                      f"(default {ARC_NOTCH_CHAMFER}; 0 = square edge)")
+    grip.add_argument("--scoop-w", type=float, default=SCOOP_W, metavar="MM",
+                      help=f"finger scoop width (default {SCOOP_W})")
+    grip.add_argument("--scoop-above-floor", type=float,
+                      default=SCOOP_ABOVE_FLOOR, metavar="MM",
+                      help="friction-design scoop bottom above the interior "
+                      f"floor (default {SCOOP_ABOVE_FLOOR}; the magnet-skirt "
+                      "scoop bottom derives from the back notch instead)")
     a = p.parse_args(argv)
+    if a.arc_notch_gap < 0.8:
+        p.error("--arc-notch-gap below 0.8 mm would risk a dust slit "
+                "between the back notch and the magnet-skirt scoop")
     CLEAR_FRICTION, CLEAR_MAGNET = a.clear_friction, a.clear_magnet
     LIP_CLEAR, POCKET_D, POCKET_DEPTH = a.lip_clear, a.pocket_d, a.pocket_depth
     WALL_T, FLOOR_T, SKIRT_T = a.wall_t, a.floor_t, a.skirt_t
     PEDESTAL_CHAMFER_BOTTOM = a.chamfer_bottom
     PEDESTAL_CHAMFER_WALL = a.chamfer_side_wall
+    NOTCH_W, NOTCH_H = a.notch_w, a.notch_h
+    ARC_NOTCH_W, ARC_NOTCH_H = a.arc_notch_w, a.arc_notch_h
+    ARC_NOTCH_GAP, ARC_NOTCH_CHAMFER = a.arc_notch_gap, a.arc_notch_chamfer
+    SCOOP_W, SCOOP_ABOVE_FLOOR = a.scoop_w, a.scoop_above_floor
 
 
 def tolerance_summary():
@@ -816,6 +925,11 @@ def build_preview(case, parts_world):
                           + (f"; magnets sit {POCKET_DEPTH - 3.0:.1f} mm recessed"
                              if has_magnets else ""))
     dims["shell"] = shell_summary()
+    if "magnet-skirt" in case.designs:
+        dims["grip"] = (f"side notches {NOTCH_W:.1f} x {NOTCH_H:.1f} mm; "
+                        f"skirt back notch {ARC_NOTCH_W:.1f} x "
+                        f"{ARC_NOTCH_H:.1f} mm, {ARC_NOTCH_GAP:.1f} mm band "
+                        f"to its scoop")
     mag_counts = {"magnet-skirt": 8, "magnet-flat": 6, "magnet-pedestal": 6}
     data = {
         "title": f"Filtarr — {case.cfg['display']}",

@@ -165,7 +165,22 @@ solid one. Don't "optimize" slabs; thin walls instead.
   bulges (print feedback 2026-07-24: raw tangent lobes felt fragile, like pipes
   glued on — the closing adds side gussets; the lid channel follows automatically
   since it derives from `ext_skirt`). Kept for A/B testing, but the user prefers
-  the flat style aesthetically.
+  the flat style aesthetically. Opening (use feedback 2026-08-01: 4 pairs
+  ≈ 25–30 N vs ~23–35 N weak-user sustained pinch — two side notches weren't
+  enough): the lid adds a THIRD notch mid-arc (`ARC_NOTCH_*` 24 w × 10 h, r4 —
+  what the thumb feels is the FLAT ledge W−2r, per ANSUR thumb-breadth data — with
+  a 1 mm ceiling ramp cut by a tilted second `slot_cutter`; the ramp faces up in
+  print orientation, no overhang). Fingers pinch the side notches, thumb pushes
+  the back ledge up → the arc pairs peel first, then the sides. The magnet-skirt
+  scoop bottom is DERIVED = notch top + `ARC_NOTCH_GAP` (6) so notch and scoop can
+  never overlap (dust seal by construction — v1 instead capped the notch under the
+  friction-depth scoop and the user rejected the cramped 6 mm window / 1 mm
+  sliver). Guards: `slot_cutter` clamps corner radii (else an empty-polygon
+  buffer crashes far from the cause, e.g. --floor-t ≤ 1.5), --arc-notch-gap < 0.8
+  errors, and a channel-breaking --arc-notch-w raises with the measured margin
+  (worst paper v60-cafec-01: 3.37 mm at the default 24). Friction lid keeps 2
+  notches + the 8 mm-above-floor scoop deliberately — no magnets to peel; its
+  STLs stayed bit-identical through this change.
 - **magnet-flat**: user's preferred reference style (orange corner-magnet box /
   "MAG BOX" CAD image): flat 4.6 mm lay-on lid + 2.5 mm alignment lip, 3 magnet pairs
   in smoothly blended corner bulges (apex + both wide-end corners; centres found by
@@ -211,12 +226,15 @@ bridging): bases print upright, lids upside down (also makes the engraving crisp
 against the bed).
 
 Printer-fit tolerances (CLEAR_FRICTION 0.28, CLEAR_MAGNET 0.50, LIP_CLEAR 0.5,
-POCKET_D 6.4, POCKET_DEPTH 3.2) and shell thicknesses (WALL_T/FLOOR_T 2.0,
-SKIRT_T 1.6) are argparse flags (`apply_printer_args` in generate.py, exposed
-as `make generate GEN_ARGS="--clear-friction 0.32"` / `--wall-t 1.6`) so parts
+POCKET_D 6.4, POCKET_DEPTH 3.2), shell thicknesses (WALL_T/FLOOR_T 2.0,
+SKIRT_T 1.6) and grip geometry (NOTCH_W/H 22/10, ARC_NOTCH_W/H/GAP/CHAMFER
+24/10/6/1, SCOOP_W 36, SCOOP_ABOVE_FLOOR 8) are argparse flags
+(`apply_printer_args` in generate.py, exposed as
+`make generate GEN_ARGS="--clear-friction 0.32"` / `--wall-t 1.6`) so parts
 can be tuned per printer without code edits — added for the user's friend
-Kazım who prints these. Previews list them in the Dimensions → Tolerances and
-Shell rows; keep the README Printing bullets + Fit-tuning table in sync.
+Kazım who prints these. Previews list them in the Dimensions → Tolerances,
+Shell and Grip rows; keep the README Printing bullets + Fit-tuning table in
+sync.
 
 Engraving: `ENGRAVE_TEXT` = "Filtarr" (the project/brand name), 0.6 mm deep
 (3 layers), 60 mm wide, centred at 0.7·R_INT on the bisector. Orientation is a
@@ -265,7 +283,12 @@ upright when the wedge TIP points at the reader (the `rotate(-90)` in
   lids got the LID_CORE_T underside recess. Kazım wanted everything ≤2 mm; the
   magnet-lid rim can't (pocket 3.2 + roof 1.4 = 4.6, else magnets touch).
 - Still pending from real use: friction-fit tolerance, magnet snap strength,
-  scoop width.
+  scoop width; the magnet-skirt back thumb notch (2026-08-01, from Arda's own
+  use feedback — magnets too strong for two side grips) is designed and shipped
+  but not print-tested yet. If it's still hard to open, the researched next
+  step (user's call, separate change): deepen ONLY the two arc pockets ~0.4 mm
+  per side → arc pairs become designed break-tabs (~45 % less push force,
+  ~23 % less total hold).
 - Widest parts per paper (the pedestal design is always the largest): V60-02
   ~219 mm (needs a 220 bed), CAFEC cup 4 ~207 mm, V60-01 ~187 mm, CAFEC cup 1
   ~177 mm, Deep 27 ~182 mm (pedestal base; its other designs stay ~172, so only
