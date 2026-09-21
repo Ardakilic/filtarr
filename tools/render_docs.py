@@ -62,7 +62,7 @@ def show(ax, meshes_cols, elev=25, azim=-55):
     ax.view_init(elev=elev, azim=azim)
 
 
-GRAY, CREAM, STEEL = "#9aa2ad", "#efe3c8", "#dfe3e8"
+GRAY, STEEL = "#9aa2ad", "#dfe3e8"
 TITLES = {"friction": "Friction fit", "magnet-skirt": "Magnetic (skirt)",
           "magnet-flat": "Magnetic (flat lid)",
           "magnet-pedestal": "Magnetic (pedestal)"}
@@ -85,10 +85,14 @@ def render_grid(g, case, out_path):
         pedestal = design == "magnet-pedestal"
         base = case.build_base(design)
         lid = case.build_lid(design)
-        paper = case.paper_ghost(g.PEDESTAL_H if pedestal else 0.0)
+        # the preview's default contents scene
+        shown = next(sc["parts"] for sc in case.scenes
+                     if sc["name"] == case.default_scene)
+        ghosts = [(gh["mesh"], gh["color"]) for gh in case.ghosts(design)
+                  if gh["name"] in shown]
         color = g.LID_COLORS[design]
         closed = [(base, GRAY), (lid, color)]
-        lifted = [(base, GRAY), (paper, CREAM), (lift(lid, 70), color)]
+        lifted = [(base, GRAY)] + ghosts + [(lift(lid, 70), color)]
         if design.startswith("magnet"):
             centres = (case.magnets_skirt if design == "magnet-skirt"
                        else case.magnets_flat)
@@ -110,12 +114,16 @@ def render_grid(g, case, out_path):
 
 
 def render_engraving(g, case, out_path):
-    """Crisp 2D top view of the flat lid, in the reader's orientation:
-    wedge tip toward the reader. world (x, y) -> view (h, v) = (-y, x)."""
+    """Crisp 2D top view of the flat lid, in the reader's orientation. By
+    default the wedge tip points toward the reader: world (x, y) -> view
+    (h, v) = (-y, x); papers engraved along +X (engrave_rot 0, the combo) are
+    shown as modelled."""
     fig, ax = plt.subplots(figsize=(8, 6), dpi=130)
 
     def view(xy):
         xs, ys = np.asarray(xy[0]), np.asarray(xy[1])
+        if case.engrave_rot == 0:
+            return xs, ys
         return -ys, xs
 
     def plot_poly(poly, **kw):
@@ -139,8 +147,9 @@ def render_engraving(g, case, out_path):
             ax.fill(*view(hole.xy), color="white")
     if has_flat:
         for cx, cy in case.magnets_flat:
-            ax.add_patch(plt.Circle((-cy, cx), g.POCKET_D / 2, fill=False,
-                                    color="#8896a8", lw=1.2))
+            h, v = view((cx, cy))
+            ax.add_patch(plt.Circle((float(h), float(v)), g.POCKET_D / 2,
+                                    fill=False, color="#8896a8", lw=1.2))
     ax.set_aspect("equal")
     ax.set_title(f'"{g.ENGRAVE_TEXT}" engraving — {g.ENGRAVE_DEPTH} mm deep, '
                  f"{lid_name}, {case.cfg['display']} (mm)", fontsize=11)
@@ -155,7 +164,7 @@ def render_engraving(g, case, out_path):
 def main():
     g = load_generator()
     for slug in g.PAPERS:
-        case = g.Case(slug)
+        case = g.make_case(slug)
         docs = os.path.join(case.out_dir, "docs")
         os.makedirs(docs, exist_ok=True)
         sfx = suffix_for(g, case)

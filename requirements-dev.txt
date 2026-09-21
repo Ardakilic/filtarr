@@ -1,0 +1,8 @@
+# Extras for tools/verify.py only (`make verify`) — the generators never need
+# them. trimesh's ray casts want rtree; its cross-sections want scipy and
+# networkx. Pinned like requirements.txt so a verify run is reproducible;
+# `make verify` installs them into a throwaway container on top of the build
+# image, so they never end up in it.
+rtree==1.4.1
+scipy==1.18.1
+networkx==3.6.1

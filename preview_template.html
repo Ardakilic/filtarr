@@ -30,7 +30,10 @@
                     color: #08201c; font-weight: 600; }
   label.row { display: flex; align-items: center; gap: 8px; margin: 7px 0;
               cursor: pointer; user-select: none; }
-  input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; }
+  input[type=checkbox], input[type=radio] {
+    accent-color: var(--accent); width: 15px; height: 15px; }
+  #scenes { margin: 0 0 4px 23px; font-size: 13px; }
+  #scenes label.row { margin: 5px 0; }
   .slider { margin: 12px 0 4px; }
   .slider span { display: flex; justify-content: space-between;
                  color: var(--muted); font-size: 12px; margin-bottom: 4px; }
@@ -52,6 +55,7 @@
                    text-decoration-color: var(--line); }
   #parts .file a:hover { color: var(--accent); }
   #parts .need { color: var(--muted); font-size: 11.5px; margin-top: 5px; }
+  #parts .opt { margin-top: 10px; }
   @media (max-width: 640px) {
     #ui { width: 210px; } #dims { display: none; } #hint { display: none; }
   }
@@ -70,7 +74,8 @@
   <label class="row"><input id="show-lid" type="checkbox" checked> Show lid</label>
   <label class="row"><input id="engrave" type="checkbox" checked> "Filtarr" engraving</label>
   <label class="row"><input id="xray-lid" type="checkbox"> X-ray lid</label>
-  <label class="row"><input id="show-papers" type="checkbox" checked> Ghost paper stack</label>
+  <label class="row"><input id="show-papers" type="checkbox" checked> <span id="papers-label">Ghost paper stack</span></label>
+  <div id="scenes"></div>
   <label class="row"><input id="spin" type="checkbox" checked> Auto-rotate</label>
   <div id="parts"></div>
 </div>
@@ -246,6 +251,28 @@ function main(THREE) {
   const tabs = [...tabsBox.children];
   if (tabs.length < 2) tabsBox.style.display = "none";
 
+  // contents scenes: each lists the ghost parts (by name) that show together.
+  // One scene = the plain on/off checkbox; several add a radio list under it.
+  const SCENES = DATA.scenes;
+  const ghostNames = new Set(SCENES.flatMap(sc => sc.parts));
+  let contents = SCENES.find(sc => sc.name === DATA.scene) || SCENES[0];
+  if (SCENES.length === 1) {
+    $("papers-label").textContent = contents.label;
+  } else {
+    $("papers-label").textContent = "Show contents";
+    for (const sc of SCENES) {
+      const row = document.createElement("label");
+      row.className = "row";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "scene";
+      radio.checked = sc === contents;
+      radio.oninput = () => { contents = sc; refresh(); };
+      row.append(radio, " " + sc.label);
+      $("scenes").appendChild(row);
+    }
+  }
+
   let active = Object.keys(DATA.variants)[0];
   function setVariant(v) {
     active = v;
@@ -266,7 +293,8 @@ function main(THREE) {
         const p = mesh.userData;
         const isLid = p.attach === "lid";
         mesh.position.z = isLid ? lift : 0;
-        if (p.name === "papers") mesh.visible = showPapers;
+        if (ghostNames.has(p.name))
+          mesh.visible = showPapers && contents.parts.includes(p.name);
         else if (p.name === "lid") mesh.visible = showLid && !engraved;
         else if (p.name === "lid-engraved") mesh.visible = showLid && engraved;
         else if (isLid) mesh.visible = showLid;
@@ -282,9 +310,13 @@ function main(THREE) {
     const pr = DATA.print && DATA.print[active];
     if (pr) {
       const link = f => `<div class="file"><a href="${f}" download>${f}</a></div>`;
+      const extras = pr.extras || [];
       $("parts").innerHTML = "<b>Print these two</b>" +
         link(pr.base) + link(engraved ? pr.lid_engraved : pr.lid) +
-        (pr.magnets ? `<div class="need">plus ${pr.magnets}</div>` : "");
+        (pr.magnets ? `<div class="need">plus ${pr.magnets}</div>` : "") +
+        (extras.length ? `<div class="opt"><b>${pr.extras_title}</b></div>` : "") +
+        extras.map(x =>
+          `<div class="need">${x.note}</div>` + link(x.file)).join("");
     }
   }
   ["explode", "show-lid", "engrave", "xray-lid", "show-papers"]
@@ -299,6 +331,7 @@ function main(THREE) {
   }
   const ROWS = { paper: "Paper", interior: "Interior",
                  closedH: "Closed height", magnets: "Magnets",
+                 divider: "Divider", table: "Table",
                  tolerances: "Tolerances", shell: "Shell", grip: "Grip" };
   $("dims").innerHTML = "<b>Dimensions</b>" +
     Object.entries(ROWS).filter(([k]) => DATA.dims[k])

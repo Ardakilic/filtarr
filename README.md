@@ -2,9 +2,10 @@
 
 3D-printable, dust-proof storage boxes for **pour-over paper filters** — currently
 five papers (CAFEC Deep 27, Hario/CAFEC V60 sizes 01 & 02, and compact tabless CAFEC
-cone variants) in four case designs, each with an optional engraved lid. Everything
-is generated from one parametric Python script; adding a new paper is one registry
-entry ([HOWTO](HOWTO.md)).
+cone variants) plus a two-paper [combo box](#combo-box-two-papers-one-case), in four
+case designs, each with an optional engraved lid. Everything is generated from one
+parametric Python script; adding a new paper is one registry entry
+([HOWTO](HOWTO.md)).
 
 **Browse the interactive 3D previews and download STLs at
 [ardakilic.github.io/filtarr](https://ardakilic.github.io/filtarr/).**
@@ -26,6 +27,7 @@ variants.*
 | V60 size 02 (Hario / CAFEC) — [`v60/`](v60/) | 90° wedge, ≤128 mm seam edge + tab | all 4 | 162 × 219 mm |
 | CAFEC cone cup 1, tabless — [`v60/`](v60/) | 90° wedge, 106 mm seam edge, no tab | all 4 | 133 × 177 mm |
 | CAFEC cone cup 4, tabless — [`v60/`](v60/) | 90° wedge, 127 mm seam edge, no tab | all 4 | 154 × 207 mm |
+| **Combo**: CAFEC Deep 27 + V60 size 01 — [`combo/`](combo/) | both wedges above, overlaid against one shared wall | all 4 + optional dividers | 192 × 135 mm |
 
 The V60 boxes add radial clearance for the little **hanging tab** on the arc edge;
 since its position varies by brand (Hario, CAFEC, generics), the whole interior is
@@ -48,8 +50,8 @@ papers upside down balances the pile (the wedge is symmetric).
 | | Friction fit | Magnetic (skirt) | Magnetic (flat lid) | Magnetic (pedestal) |
 |---|---|---|---|---|
 | Lid style | full-cover telescoping lid | full-cover telescoping lid | flat lay-on lid, MAG-BOX style | flat lay-on lid, MAG-BOX style |
-| Closure | snug fit (0.28 mm/side) | loose glide + 4 magnet pairs | 3 magnet pairs in the corners | 3 magnet pairs in the corners |
-| Magnets needed | none | 8× Ø6 × 3 mm | 6× Ø6 × 3 mm | 6× Ø6 × 3 mm |
+| Closure | snug fit (0.28 mm/side) | loose glide + 4 magnet pairs | 3 magnet pairs in the corners (combo box: 4) | 3 magnet pairs in the corners (combo box: 4) |
+| Magnets needed | none | 8× Ø6 × 3 mm | 6× Ø6 × 3 mm (combo box: 8×) | 6× Ø6 × 3 mm (combo box: 8×) |
 | Paper access | finger scoop in the wide-end wall | finger scoop in the wide-end wall (shorter — it rides above the thumb notch) | whole top opens; pry slot under the lid edge | finger bay + moat: pinch one sheet from under its edge |
 | Opening grip | 2 side notches + 3 mm rim | 2 side notches **+ back thumb notch** — push its ledge up, the arc magnets peel first | pry slot under the lid edge, mid-arc | pry slot on the finger bay's face |
 | Character | no hardware at all | most dust-proof magnetic option | simplest, lightest lid, one-hand open | easiest paper picking, 8 mm taller |
@@ -73,6 +75,55 @@ then lift (peeling one magnet pair at a time needs far less force than pulling a
 four at once). An alignment lip on the flat lids so they can't slide sideways; no
 supports needed in the exported print orientation.
 
+## Combo box: two papers, one case
+
+Own both a Deep 27 and a V60 01? The **combo** case holds either paper — or both at
+once — in one box. Its cavity is an *asymmetric keyhole*: the narrow 155 mm Deep 27
+wedge and the wide 107 mm V60 01 fan share the tip and one long straight wall, and
+each is sized with the same slack formula as its dedicated box, so neither paper
+swims around. (A plain "V60 angle × Deep 27 length" wedge would be ~240 mm wide and
+let a Deep 27 stack swing ±26°.) Because the shared tip is the blunter V60 one, each
+paper ends up with ~8–9.5 mm of lengthwise play instead of 3.5 mm — harmless, and in
+keeping with "never squeezed". Whatever part of the cavity one paper leaves empty is
+finger room for picking the other.
+
+- **Capacity** (47 mm deep): a full 100-pack of **either** paper — or part packs of
+  **both** with an optional divider. There are two; print one:
+  - **Table divider** (`combo-case-divider-table.stl`, or
+    `…-divider-table-pedestal.stl` for the pedestal design) — the sturdy choice.
+    A 1.6 mm top on 22 mm legs with a fixed split: **Deep 27 on the floor**
+    (≈55 sheets fit under it), **V60 01 on the table** (23.4 mm of room; 20.9 mm
+    at the very edge, under the flat lids' lip ring). The order is fixed by where
+    legs can stand — three round posts in the corner only the V60 paper uses, two
+    feet beyond the Deep 27 arc edge. Push the Deep 27 stack **home into the tip**
+    before dropping the table in: pushed out more than ~4 mm, its wide edge ends
+    up under the two feet at the far end; skewed, it can also foul the post
+    beside the tip. Seated home, every leg clears the stack by about 3 mm. Prints
+    legs-up, no supports.
+  - **Loose plate** (`combo-case-divider.stl`, prints flat) — flexible split, but
+    it rides on the lower stack and is statically marginal. Use it the other way
+    round: **V60 01 on the floor, the plate, Deep 27 on top** (the reverse starts
+    to tip from about half a pack). If your V60-size sheets run small (≈100 mm
+    clones, CAFEC cup 1), slide the lower stack outward, toward the long end, so
+    it supports more of the plate.
+
+  Both have a finger hole at each end, so one is always uncovered whichever stack
+  lies on top — pull from either side. Both dividers are **experimental and not
+  print-tested yet** — feedback welcome.
+- **Designs**: all four. The telescoping designs get the Deep 27 end's grips at
+  **both** ends: a finger scoop on each arc (friction and magnet-skirt bases), and
+  on the magnet-skirt lid a thumb notch on each arc too — so the V60 end opens
+  just like the Deep 27 end. Both telescoping lids have **three** bottom-edge grip
+  notches: one on each wall next to the tip plus one on the flat inner wall of the
+  long end. In short — friction: 3 side notches + 2 scoops; magnet-skirt: 3 side
+  notches + 2 thumb notches + 2 scoops. The pedestal design gets **two moats and
+  two finger bays** — one per paper — so each paper's arc edge overhangs its own
+  moat.
+- **Magnets**: the flat and pedestal lids have four corners here, so they take
+  **4 pairs (8 magnets)** instead of 3; magnet-skirt stays at 4 pairs.
+- **Engraving** runs along the long flat wall (see
+  [below](#the-filtarr-engraving)).
+
 ## Gallery
 
 **V60 size 01 (Hario / CAFEC)** — fits all brands, tab included —
@@ -95,11 +146,18 @@ supports needed in the exported print orientation.
 
 ![CAFEC cone cup 4 cases](v60/docs/renders-cafec-02.png)
 
+**Combo — CAFEC Deep 27 + V60 size 01** — one box for both papers, with optional
+dividers — [interactive preview](https://ardakilic.github.io/filtarr/combo/preview.html)
+
+![Combo cases for CAFEC Deep 27 + V60 01](combo/docs/renders.png)
+
 ## The "Filtarr" engraving
 
 Every design has a second lid STL with **"Filtarr"** engraved 0.6 mm into the top face
 (60 mm wide, Arial-style bold), upright when the tip of the wedge points at you. Text,
-size, depth, font and position are parameters in `generate.py`.
+size, depth, font and position are parameters in `generate.py`. The asymmetric combo
+box is the exception: its text is centred on the lid and runs along the long flat
+wall — upright when that wall faces you (per-paper `engrave_rot`, one value to flip).
 
 ![Engraving placement](deep27/docs/engraving.png)
 
@@ -114,12 +172,17 @@ fully self-contained HTML file (no internet needed), open in any browser:
 - [`v60/preview-02.html`](v60/preview-02.html)
 - [`v60/preview-cafec-01.html`](v60/preview-cafec-01.html)
 - [`v60/preview-cafec-02.html`](v60/preview-cafec-02.html)
+- [`combo/preview.html`](combo/preview.html)
 
 Switch between the designs, toggle the engraving, lift the lid with the slider, and
-turn on X-ray or the ghost paper stack (which includes the V60 tab). The **"Print
-these two"** panel always names the exact STL files (and magnet count) for what you're
-looking at, the Dimensions panel lists the printer-fit tolerances, and "← All papers"
-returns to the index.
+turn on X-ray or the ghost paper stack (which includes the V60 tab). The combo
+preview replaces that toggle with "Show contents" plus a scene picker — Deep 27 only,
+V60 01 only, both with the loose plate, or both with the table divider — each drawn
+the way it would sit in the box. The **"Print these two"** panel always names the
+exact STL files (and magnet count) for what you're looking at — on the combo it adds
+an "Optional divider … print one" list with the plate and the right table — the
+Dimensions panel lists the printer-fit tolerances, and "← All papers" returns to the
+index.
 
 ## Files
 
@@ -133,14 +196,25 @@ the same design:
 <folder>/stl/<paper>-case-magnet-pedestal-{base,lid,lid-engraved}.stl
 ```
 
+The combo box adds three optional divider STLs to its 12 design STLs (print at most
+one — see [Combo box](#combo-box-two-papers-one-case)):
+
+```
+combo/stl/combo-case-divider.stl                  loose plate, any design
+combo/stl/combo-case-divider-table.stl            table on legs: friction / magnet-skirt / magnet-flat
+combo/stl/combo-case-divider-table-pedestal.stl   table on legs: magnet-pedestal
+```
+
 ## Printing
 
-- **Bed size**: see the supported-papers table — the "Largest part" is always the
-  pedestal design (its finger bay adds ~12 mm in one axis). Deep 27 and CAFEC cup 1
+- **Bed size**: see the supported-papers table — the "Largest part" is the
+  pedestal design (its finger bay adds ~12 mm in one axis), except for the combo
+  box, where the magnet-skirt lid is the longest part. Deep 27 and CAFEC cup 1
   fit 180 × 180 mm beds, except the Deep 27 pedestal base at 182 mm; V60-01 needs
   ~190 mm in one axis (its friction design fits 180); CAFEC cup 4 needs ~200 mm
   (friction/skirt) to ~210 mm (flat/pedestal); the all-brands V60-02 needs a 220 mm
-  bed.
+  bed. The combo box's largest part as exported is 192 × 135 mm (magnet-skirt
+  lid).
 - **Material**: PLA or PETG, 0.4 mm nozzle, 0.2 mm layers, 3 perimeters, 10–15 % infill.
 - **Shell**: 2.0 mm walls and floor (5 perimeters / 10 layers with a 0.4 nozzle),
   2.0 mm friction lid, 1.6 mm telescoping lid skirts (a closed hoop, braced by the
@@ -184,8 +258,13 @@ make generate GEN_ARGS="--clear-friction 0.32"
 | `--arc-notch-chamfer` | 1.0 mm | ramped ceiling of the back notch, so the thumb meets a slope instead of the 1.6 mm skirt edge; `0` = square |
 | `--scoop-w` | 36 mm | finger scoop width (both telescoping designs) |
 | `--scoop-above-floor` | 8 mm | friction scoop bottom above the interior floor (the magnet-skirt scoop derives from the back notch instead) |
+| `--divider-t` / `--divider-clear` | 1.6 / 1.0 mm | combo box dividers (loose plate and table top): thickness / gap to the cavity walls per side (raise the gap if it binds when lifted out) |
+| `--divider-leg-h` | 22 mm | combo table divider: clear height under the top = room for the Deep 27 stack below (≈55 sheets at 22); the rest of the 47 mm, minus the top, is V60 01 room above — at least 10 mm must remain |
 | `--chamfer-bottom` | 2.0 mm | 45° chamfer at the pedestal's foot, in the moat — fades the shrink witness line on the base's underside (research says 1.5–3 mm is the useful range; it attenuates, not eliminates); `0` disables |
 | `--chamfer-side-wall` | 1.2 mm | 45° cove where the pedestal top meets the side walls/apex — softens the section-change ring and the sharp interior corner; keep small (papers sit close to the walls near the tip); `0` disables |
+
+Pass the same `GEN_ARGS` to `make verify` to self-test a tuned build before printing
+(see [Regenerating](#regenerating--customizing)).
 
 Quick alternative if only the friction lid is too tight/loose: scale the **lid
 only** by ∓0.2 % in XY in your slicer. Both magnetic closures are
@@ -210,7 +289,8 @@ magnet-lid thickness is dictated by the magnet pockets.)
 ## Magnet assembly (all magnetic designs)
 
 Magnets: **Ø6 mm × 3 mm** discs (N35 or stronger) — 8 for the skirt design, 6 for the
-flat and pedestal designs. Pockets are Ø6.4 × 3.2 mm, so each magnet sits ~0.2 mm
+flat and pedestal designs (the combo box has four corners: 8 for every magnetic
+design). Pockets are Ø6.4 × 3.2 mm, so each magnet sits ~0.2 mm
 recessed — facing pairs never touch, giving a gentle snap that opens with one hand.
 
 Get the polarity right on the first try:
@@ -226,13 +306,15 @@ Get the polarity right on the first try:
 
 ## Regenerating / customizing
 
-Everything runs inside Docker (`python:3-slim`) — no local Python needed, just
-Docker and make:
+Everything runs inside Docker (`python:3.14-slim`, with every package in
+`requirements.txt` pinned — so a rebuilt image reproduces the published STLs byte for
+byte) — no local Python needed, just Docker and make:
 
 ```bash
 make              # everything: STLs + previews + index + README images
 make generate     # STLs + preview HTMLs + index.html
 make docs         # README images (<folder>/docs/*.png)
+make verify       # geometry self-test of every paper × design (PASS/FAIL table)
 make vendor       # fetch the latest three.js build (two files) into vendor/
 make image        # (re)build the Docker build image only
 make clean        # delete all generated outputs
@@ -240,12 +322,26 @@ make clean        # delete all generated outputs
 
 (Without Docker: `pip install -r requirements.txt && python3 generate.py` works too.)
 
+**`make verify`** runs `tools/verify.py`: it rebuilds every paper and design in memory
+(it never touches the generated files) and checks the things a watertight mesh can
+still get wrong — lids that interfere with their base, lid clearances, magnet pocket
+depth / roof / alignment, wall thickness, dust-seal bands, that the papers (tab
+included) really fit, the pedestal overhangs, and for the combo box the divider holes
+and both tables. It also counts each design's features (side notches, grip arcs,
+magnet pairs, finger bays, extras), so a silently dropped feature fails the run, and
+measures on a mesh cross-section that the cavity has no sharp inward corner (the combo
+box's rounded shoulder). It exits non-zero on any failure. Run it after tuning flags —
+`make verify GEN_ARGS="--clear-friction 0.32"` checks exactly the build you are about
+to print — and after adding a paper (new entries are covered automatically). The
+ray-cast extras it needs are pinned in `requirements-dev.txt` and installed in a
+throwaway container, so nothing lands on your machine.
+
 Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 `generate.py`:
 
 | Parameter | Default | Meaning |
 |---|---|---|
-| `PAPERS` | 5 entries | the paper registry (side / angle / tab clearance / designs) |
+| `PAPERS` | 6 entries | the paper registry (side / angle / tab clearance / designs; or `combines` for a two-paper combo box) |
 | `DEPTH` / per-paper `depth` | 42 / 47 / 54 mm | interior depth — 42 default (Hario), deeper for creped CAFEC papers |
 | `WALL_T` / `FLOOR_T` | 2.0 / 2.0 mm | base shell (also CLI flags — see [Fit tuning](#fit-tuning)) |
 | `LID_T_FRICTION` / `LID_T_MAGNET` / `LID_CORE_T` | 2.0 / 4.6 / 2.0 mm | lid plates; magnet lids keep 4.6 only at rim & pockets, recessed to 2.0 elsewhere |
@@ -259,6 +355,8 @@ Add a new paper: see **[HOWTO.md](HOWTO.md)**. Useful shared knobs at the top of
 | `PEDESTAL_H` / `MOAT_W` | 8 / 15 mm | pedestal design: pedestal height / moat width (+ tab clearance) |
 | `PEDESTAL_CHAMFER_BOTTOM` / `PEDESTAL_CHAMFER_WALL` | 2.0 / 1.2 mm | pedestal foot chamfer / pedestal-top wall cove (both CLI flags; `0` disables) |
 | `BAY_W` / `BAY_D` | 34 / 12 mm | pedestal design: finger bay opening width / outward depth |
+| `DIVIDER_T` / `DIVIDER_CLEAR` / `DIVIDER_HOLE_D` | 1.6 / 1.0 / 22 mm | combo box dividers: top thickness / gap to the walls per side (both CLI flags) / the two finger holes |
+| `DIVIDER_LEG_H` / `DIVIDER_POST_D` | 22 / 8 mm | combo table divider: clear height under the top (CLI flag) / round post diameter |
 
 The engraving font comes from `FONT_CANDIDATES`: Arial Bold where available, and
 Liberation Sans Bold (the metric-compatible Arial substitute installed in the Docker

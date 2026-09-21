@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Download the latest three.js ES-module build into vendor/.
 
-Stdlib only, so it runs in a bare python:3-slim container (see Makefile's
+Stdlib only, so it runs in a bare python:3.14-slim container (see Makefile's
 `vendor` target). three.js dropped its UMD build after r160 — the previews
 embed the module build and load it via a blob dynamic import.
 """
