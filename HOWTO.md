@@ -39,7 +39,7 @@ Lay one sheet flat and measure three things:
 | `width` | the **top chord** `c`: straight across the arc, corner to corner |
 | `height` | the **centre height** `h`: from the bottom edge to the top of the arc, along the centre line |
 | `bottom` | the **bottom edge** `b`: the straight crimped seam at the narrow end |
-| `variants` (optional) | `((width, height, bottom), ...)` of other real sheets the box must also hold — other brands or batches. The box is sized to fit every one, and `make verify` seats each one (≥ 1 mm of play and of clearance to the walls, corners on the flat bottom wall, pedestal overhang). |
+| `variants` (optional) | `((width, height, bottom), ...)` of other real sheets the box must also hold — other brands or batches. The box is sized to fit every one, and `make verify` seats each one pushed home: ≥ 1 mm of push play; sides and arc ≥ 1 mm from the walls (fillets included) beyond the 2 mm corner zone at the bottom wall; both bottom corners on the flat bottom wall with ≥ 0.3 mm of it left before the fillets (clearance inside the corner zone is reported, not enforced); pedestal overhang at the bay. |
 
 `width` / `height` / `bottom` describe one **reference** sheet — typically the
 largest of the size. `fan_solve()` derives the fan angle, arc radius and
