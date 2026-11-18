@@ -182,7 +182,9 @@ reproducibility gotcha.)
   paper is covered automatically (it loops PAPERS); a new FEATURE needs a new
   check there. Shape-extensible: `kind(case)` = `plain` / `combo` / the PAPERS
   `shape`; what differs per kind lives in the PER-KIND TABLES (`EXPECT` with
-  its COUNTED keys + optional `"side-notched lids"`, `PAPER_SHAPES`,
+  its COUNTED keys + optional `"side-notched lids"`, `EXPECTED_EXTRAS`
+  (fn(case, design) → the extras that design must ship; unlisted kinds ship
+  none — combo: plate + the design's table), `PAPER_SHAPES`,
   `SIDE_NOTCH_WALL`, `PEDESTAL_OVERHANG`, `CASE_CHECKS`, `DESIGN_CHECKS`,
   `PROBE_NUDGE` — plain/combo keep (0, 0) so their results stay pinned, other
   kinds default to (0.31, 0.17) because a ray through a round cavity's centre
@@ -200,16 +202,21 @@ reproducibility gotcha.)
   mesh (`check_trap_overhang`; an empty cut fails). Round: disc play =
   2·DISC_SLACK on two axes, twist-off friction lid (0 openings, skirt edge at
   PLINTH on 360 rays), 6 skirt windows ≥ ROUND_MIN_GAP apart, ramp-vs-scoop
-  band at the window flanks, scoop + 3 lobes on plain wall, pedestal bay
+  band at the window flanks, magnet-skirt lid turned ±120° (lid mesh
+  rotated about Z: the side-notch ceiling over the scoop keeps ≥
+  ROUND_MIN_BAND to the base's scoop bottom across the scoop —
+  `check_round_turned_lid`, the mesh twin of the generate-time turned-lid
+  guard), scoop + 3 lobes on plain wall, pedestal bay
   channel width, the largest disc lies flat on the plinth (bore just above
   it ≥ r_disc + 0.1 — the capped cove), the REGISTRY `stack_h` ≤ depth − 4
-  (RoundCase.stack_h clamps, so the clamped value can't fail) and the ghost
+  (RoundCase.stack_h clamps, so the clamped value can't fail; an entry
+  without `stack_h` is checked at its effective capped height) and the ghost
   top ≥ 1 mm under the flat lids' lip (meshes). `check_round_ramp` is
   belt-and-braces: audit item D6 (the ramp climbing toward the window
   flanks) is moot on the round boxes — the 27 mm scoop's U-shaped bottom
   rises faster than the ramp, so the narrowest band is always on the
   bisector, which `check_grip_arcs` measures. Current run: 11 papers, 44
-  designs, 1356 checks. The **two gates before committing an engine change**:
+  designs, 1360 checks. The **two gates before committing an engine change**:
   (1) `make verify` passes, (2) the same-image hash gate shows the papers you
   did not mean to touch are byte-identical (see the reproducibility gotcha).
   Complements — for looking, not gating:
@@ -256,9 +263,11 @@ Cone with full apex angle A → flat sector `360·sin(A/2)`° → folded wedge
   c/(2 sin t) − b/(2 tan t) = h, R = c/(2 sin t), d = b/(2 tan t). Reference
   sheets (c, h, b — they set the box angle; the box is sized over them AND
   the variants): 101 (138, 80, 53) → 73.3°; 102 (165, 105, 53) → 70.9°; 103
-  (195, 130, 56) → 70.0°. FP bags 45/50 mm per 100, NK 40/45, Kalita's boxed
-  珈琲屋さん line ≈ 58 inside → depth 58. No tab. FP = NK = boxed 40P names;
-  101 = 1–2 cups, 102 = 2–4, 103 = 4–7. ≈ Melitta 1x1 / 1x2 / 1x4 BY OVERALL
+  (195, 130, 56) → 70.0°. FP bags 45/50 mm per 100, NK 40/45 → depth 58
+  holds those with headroom (≥ 5.5 mm even under the flat lids' 2.5 mm lip
+  band); Kalita's boxed 珈琲屋さん line (≈ 57–58 max stack, estimated from
+  its box size, low confidence) is NOT guaranteed to fit unsqueezed. No tab.
+  FP = NK = boxed 40P names; 101 = 1–2 cups, 102 = 2–4, 103 = 4–7. ≈ Melitta 1x1 / 1x2 / 1x4 BY OVERALL
   SIZE (Melitta 1x2 160 × 105 / 47 and Brooks 102 165 × 103 / 54 are verify
   variants of the 102; the 1x1 / 1x4 bottoms and angles are unverified). The
   101 bottom (50) has one retail source, the 103 bottom (56) none from Kalita.

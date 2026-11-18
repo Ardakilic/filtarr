@@ -137,8 +137,11 @@ All values in this table are <sup>S</sup> (kalita.co.jp / kalita.shop).
 - The Kalita × tower steel case (185×57×137) holds "片面約50枚づつ計約100枚"<sup>S</sup>.
 - Per ply ≈0.225 mm<sup>D</sup> (45 mm / 200 plies). That is in line with coffeeadastra's
   0.206–0.210<sup>M</sup> for V60/CAFEC paper; Kalita paper was not measured.
-- **Box depth 58 for 101–103** covers every Kalita line. The "pack + 7" minimum would be 52
-  (101/102) or 57 (103).
+- **Box depth 58 for 101–103** holds the FP / NK bag stacks (45 / 50, NK 40 / 45) with
+  headroom: ≥ 5.5 mm even under the flat / pedestal lids' 2.5 mm lip band along the walls. The
+  "pack + 7" minimum would be 52 (101/102) or 57 (103). The 珈琲屋さん line's max stack
+  (≈ 57–58, estimated from its box size, low confidence) is **not** guaranteed to fit
+  unsqueezed.
 - The crimp seam lofts one side; flipping half the stack balances it.
 
 ### Equivalents (by overall size)

@@ -61,9 +61,12 @@ about 215–240 of them), CAFEC, generic 6.4 cm discs, and Ø61–63.5 mm metal 
 The XL box takes one 200-pack of AeroPress XL filters (Ø73.7 mm).
 
 **Researched, not boxed yet** — see [RESEARCH.md](RESEARCH.md), which also records
-the sources behind every number above. **Origami** cone papers need no new box: use
-the tabless CAFEC boxes (`v60-cafec-01` / `-02`; the all-brands V60 boxes are too
-shallow for Origami's non-nesting crepe). **Kalita Wave** 155 / 185, Kalita 104 and
+the sources behind every number above. **Origami** cone papers need no new footprint:
+Cup2 / Cup4 fit the tabless CAFEC boxes (`v60-cafec-01` / `-02`; the all-brands V60
+boxes are too shallow for Origami's non-nesting crepe). Capacity is another matter:
+their 47 / 54 mm depths hold a CAFEC-pouch-size stack, but not the worst-case 50 mm
+(Cup2) / 55 mm (Cup4) 100-stack without squeezing — store fewer sheets, or build a
+deeper copy of the entry with a larger `depth` (see [HOWTO.md](HOWTO.md)). **Kalita Wave** 155 / 185, Kalita 104 and
 **drip-machine papers** (Melitta-style cones, US basket filters) are researched and
 get their boxes in a follow-up.
 
@@ -72,11 +75,12 @@ are sized per paper from measured stack heights: smooth Hario paper stacks ~32 m
 per 100, so those cases are 42 mm deep; creped CAFEC paper barely compresses (a
 100-stack stays close to its 40–50 mm pouch thickness), so Deep 27 and cup 1 get
 47 mm and cup 4 gets 54 mm, with headroom because papers fluff up once opened.
-The Kalita boxes are 58 mm deep (Kalita's bags are 40–50 mm thick, its boxed
-100-sheet line ≈ 58 mm inside). That depth doesn't count the flat and pedestal lids'
+The Kalita boxes are 58 mm deep, sized for Kalita's bagged 100-packs (40–50 mm
+thick). That depth doesn't count the flat and pedestal lids'
 2.5 mm alignment lip: along the walls — where the sheets' crimped bottom edge lies —
 those lids leave 55.5 mm, still more than 5 mm above a 50 mm bag stack (58 everywhere
-else, and on the telescoping designs). The AeroPress depths do include the lip: they
+else, and on the telescoping designs). Kalita's boxed 珈琲屋さん line (≈ 57–58 mm
+per 100, estimated from its box, low confidence) isn't guaranteed to fit unsqueezed. The AeroPress depths do include the lip: they
 hold a whole pack — 55 mm for a 350-pack, 35 mm for an XL 200-pack (worst-case stack
 plus the flat lid's lip, which in a close round bore comes down over the disc edges).
 The pedestal design adds its 8 mm pedestal *on top* of these depths, so its box is
@@ -526,8 +530,9 @@ build image) otherwise.
   165 × 105 / 53 → 71°, 195 × 130 / 56 → 70° — and each box is sized so that every
   other listed sheet (some larger in one dimension) fits too; `make verify` seats
   each one. FP bags
-  of 100 are 45–50 mm thick (NK 40–45), Kalita's boxed 100-sheet line ≈ 58 mm
-  inside → depth 58. No hanging tab.
+  of 100 are 45–50 mm thick (NK 40–45) → depth 58, with headroom; the boxed
+  珈琲屋さん line (≈ 57–58 mm, estimated, low confidence) isn't guaranteed to
+  fit unsqueezed. No hanging tab.
 - **AeroPress**: Standard micro-filters Ø63.5 mm (spec; listings up to Ø65), XL
   Ø73.7 mm (up to Ø74); ~0.12 mm per sheet → a 350-pack stacks ≈ 44 mm (50 worst
   case), an XL 200-pack 25 (29).

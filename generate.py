@@ -169,9 +169,11 @@ PAPERS = {
     # Kalita flat-bottom fan papers (TrapezoidCase). width x height x bottom
     # is a reference sheet (sets the box angle); the box is sized so every
     # listed sheet fits — reference + "variants", some larger in one
-    # dimension — and verify.py seats each one. Depth 58: never squeezed —
-    # FP bags 45/50 mm, NK 40/45, Kalita's boxed 100-sheet line ≈ 58 mm
-    # inside (with the flat lids' 2.5 mm lip: 55.5 mm along the walls).
+    # dimension — and verify.py seats each one. Depth 58: never squeezes the
+    # bag stacks — FP 45/50 mm, NK 40/45 — even under the flat lids' 2.5 mm
+    # lip (55.5 mm along the walls: >= 5.5 mm headroom). Kalita's boxed
+    # 珈琲屋さん line (max stack ≈ 57-58 mm, estimated from its box size, low
+    # confidence) is NOT guaranteed to fit unsqueezed.
     "kalita-101": {
         "display": "Kalita 101 (FP101 / NK101)",
         "folder": "kalita",
@@ -1576,7 +1578,7 @@ class ComboCase(Case):
                 + ", ".join(f"{n} is shape {PAPERS[n]['shape']!r}"
                             for n in odd))
         self.far, self.fan = self.sectors = sorted(
-            (Case(s) for s in names), key=lambda c: -c.r_int)
+            (make_case(s) for s in names), key=lambda c: -c.r_int)
         if not self.far.int_angle < self.fan.int_angle:
             raise ValueError(
                 f"{self.slug}: the longer paper ({self.far.slug}) must also "

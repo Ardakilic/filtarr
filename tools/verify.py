@@ -76,12 +76,9 @@ COUNTED = ("side notches", "grip arcs", "finger bays", "magnet-skirt pairs",
 
 
 def expected_extras(case, design):
-    """Only a combo ships extras: its loose plate + the design's own
-    table."""
-    if kind(case) != "combo":
-        return []
-    return ["divider", "divider-table-pedestal"
-            if design == "magnet-pedestal" else "divider-table"]
+    """The extras one design must ship: EXPECTED_EXTRAS[kind] (registered in
+    the PER-KIND TABLES section); a kind without an entry ships none."""
+    return list(EXPECTED_EXTRAS.get(kind(case), no_extras)(case, design))
 
 
 # --------------------------------------------------------------------------
@@ -640,6 +637,9 @@ def check_pedestal(rep, d):
 #
 #   EXPECT[k]             feature-count row (COUNTED keys + optional
 #                         "side-notched lids") — see EXPECT at the top
+#   EXPECTED_EXTRAS[k]    fn(case, design) -> [extra names] the design must
+#                         ship (Case.extras_for); optional — an unlisted kind
+#                         ships none (no_extras)
 #   PAPER_SHAPES[k]       fn(paper, tab_corner=0) -> shapely Polygon: the true
 #                         sheet on +X, BEFORE the turn onto its bisector.
 #                         seat() slides it 0..30 mm along +X and takes the
@@ -670,6 +670,12 @@ def wedge_overhang(case):
     return g.MOAT_W - g.RADIAL_SLACK
 
 
+def no_extras(case, design):
+    """EXPECTED_EXTRAS entry of a kind that ships no extras."""
+    return []
+
+
+EXPECTED_EXTRAS = {"plain": no_extras}  # combo: see its block
 PAPER_SHAPES = {"plain": wedge_paper}  # a combo's sectors are plain wedges
 SIDE_NOTCH_WALL = {"plain": (straight_wall, "straight"),
                    "combo": (straight_wall, "straight")}
@@ -870,6 +876,7 @@ def check_trap_overhang(rep, d):
 
 EXPECT["trapezoid"] = {"side notches": 2, "grip arcs": 1, "finger bays": 1,
                        "magnet-skirt pairs": 4, "flat/pedestal pairs": 4}
+EXPECTED_EXTRAS["trapezoid"] = no_extras
 PAPER_SHAPES["trapezoid"] = trapezoid_paper
 SIDE_NOTCH_WALL["trapezoid"] = (straight_wall, "straight")
 # pushed home the fan's arc edge sits RADIAL_SLACK short of the wall on the
@@ -978,6 +985,16 @@ def check_print_extras(rep, case):
                   and flat.area > 0.9 * case.divider_outline.area)
 
 
+def combo_extras(case, design):
+    """EXPECTED_EXTRAS entry of a combo: its loose plate + the design's own
+    table."""
+    return ["divider", "divider-table-pedestal"
+            if design == "magnet-pedestal" else "divider-table"]
+
+
+EXPECTED_EXTRAS["combo"] = combo_extras
+
+
 # --------------------------------------------------------------------------
 # KIND "round" — RoundCase (flat paper discs)
 # --------------------------------------------------------------------------
@@ -1039,11 +1056,15 @@ def check_disc_play(rep, case):
         play = -1.0 if span is None else span[1] - span[0]
         rep.near(f"disc play along {rot:g}° = 2 x DISC_SLACK", play,
                  2.0 * g.DISC_SLACK, 0.05)
-    # the REGISTRY value (RoundCase.stack_h clamps it, so a too-tall entry
-    # would otherwise be cut down silently): a typical pack must leave room
-    # for the flat lids' lip
-    raw = case.cfg.get("stack_h", g.PREVIEW_STACK_H)
-    rep.at_least("registry stack_h fits under the flat lids' lip",
+    # the REGISTRY value when the entry sets one (RoundCase.stack_h clamps
+    # it, so a too-tall entry would otherwise be cut down silently), else
+    # the generator's effective (capped) height: a typical pack must leave
+    # room for the flat lids' lip
+    if "stack_h" in case.cfg:
+        raw, which = case.cfg["stack_h"], "registry stack_h"
+    else:
+        raw, which = case.stack_h, "effective stack_h (no registry value)"
+    rep.at_least(f"{which} fits under the flat lids' lip",
                  case.depth - 4.0 - raw, 0.0, 0.0)
 
 
@@ -1160,6 +1181,37 @@ def check_round_ramp(rep, d):
                      f"(ceiling {ceiling:.2f})", scoop - ceiling, need)
 
 
+def check_round_turned_lid(rep, d):
+    """The lobes are 120°-symmetric, so a magnet-skirt lid also fits turned
+    by ±120° — and then a plain side notch sits over the scoop. Measured on
+    the meshes, the lid turned about Z through the origin: at several y
+    across the scoop (inside its flanks, and under the notch window) the
+    lowest lid solid at the skirt's inner face is the side-notch ceiling;
+    the base wall below the scoop must keep ROUND_MIN_BAND to it — the same
+    floor as the turned-lid guard in RoundCase._guard_round_layout."""
+    if d.name != "magnet-skirt":
+        return
+    case = d.case
+    r_in = case.r_int + g.WALL_T + d.clear + 0.05
+    r_wall = case.r_int + g.WALL_T / 2.0
+    w = min(case.scoop_w, g.NOTCH_W) / 2.0 - 1.0
+    ys = np.linspace(-w, w, 7) + 0.13  # off y = 0: no ray down an edge
+    for turn in (+120.0, -120.0):
+        lid = d.lid.copy()
+        lid.apply_transform(trimesh.transformations.rotation_matrix(
+            math.radians(turn), [0.0, 0.0, 1.0], [0.0, 0.0, 0.0]))
+        band, y_at, c_at = 1e9, 0.0, 0.0
+        for y in ys:
+            ceiling = solid_spans(lid, (math.sqrt(r_in ** 2 - y ** 2), y))[0][0]
+            scoop = solid_spans(d.base,
+                                (math.sqrt(r_wall ** 2 - y ** 2), y))[0][1]
+            if scoop - ceiling < band:
+                band, y_at, c_at = scoop - ceiling, y, ceiling
+        rep.at_least(f"lid turned {turn:+.0f}°: side notch band to the scoop "
+                     f"(ceiling {c_at:.2f} at y={y_at:+.1f})", band,
+                     g.ROUND_MIN_BAND)
+
+
 def check_round_wall(rep, d):
     """Scoop (friction / magnet-skirt) on plain circular wall, ROUND_MIN_GAP
     clear of every magnet lobe; pedestal: the finger bay's channel keeps
@@ -1200,13 +1252,14 @@ EXPECT["round"] = {"side notches": 2, "grip arcs": 1, "finger bays": 1,
                    "magnet-skirt pairs": 3, "flat/pedestal pairs": 3,
                    # twist-off friction lid: no notches (user decision)
                    "side-notched lids": ("magnet-skirt",)}
+EXPECTED_EXTRAS["round"] = no_extras
 PAPER_SHAPES["round"] = disc_paper
 SIDE_NOTCH_WALL["round"] = (circle_wall, "circular")
 PEDESTAL_OVERHANG["round"] = disc_overhang
 CASE_CHECKS["round"] = [check_disc_play]
 DESIGN_CHECKS["round"] = [check_round_skirt, check_round_ramp,
-                          check_round_wall, check_round_ghost,
-                          check_round_cove]
+                          check_round_turned_lid, check_round_wall,
+                          check_round_ghost, check_round_cove]
 
 
 # --------------------------------------------------------------------------

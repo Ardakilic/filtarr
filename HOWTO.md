@@ -164,7 +164,8 @@ wording properties), runs its guards from its own `_check()`, and registers
 with one line after the class: `CASE_CLASSES["<shape>"] = <ShapeCase>`.
 `tools/verify.py` then needs that kind's block in its PER-KIND TABLES section
 (`EXPECT`, `PAPER_SHAPES`, `SIDE_NOTCH_WALL`, `PEDESTAL_OVERHANG`,
-`CASE_CHECKS`, `DESIGN_CHECKS`) — a missing entry doesn't stop the run: it
+`CASE_CHECKS`, `DESIGN_CHECKS`; optional `EXPECTED_EXTRAS` — the extras each
+design must ship, none when unlisted) — a missing entry doesn't stop the run: it
 fails with a "checks ran" row naming the missing table entry. The existing papers must stay byte-identical: see the hash gate
 in CLAUDE.md.
 
