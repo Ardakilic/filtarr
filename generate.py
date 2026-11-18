@@ -2,16 +2,21 @@
 """
 Filtarr — parametric storage cases for pour-over paper filters.
 
-Generates print-ready STLs for two-piece, dust-proof wedge boxes that hold
-flat cone filter papers, for every paper in the PAPERS registry and in four
-case designs:
+Generates print-ready STLs for two-piece, dust-proof boxes that hold flat
+filter papers, for every paper in the PAPERS registry. The box follows the
+paper's outline ("shape"): a wedge for flat cone papers (Case), a flat-bottom
+fan for Kalita-style papers (TrapezoidCase) or a circle for paper discs such
+as AeroPress (RoundCase). Every paper comes in four case designs:
 
   * friction        — "chocolate box" full-cover telescoping lid, snug fit
+                      (round boxes: a twist-off lid without grip notches)
   * magnet-skirt    — same telescoping lid with a loose glide fit, closed by
-                      4 pairs of 6 x 3 mm disc magnets in outward wall lobes
-  * magnet-flat     — flat lay-on lid with a small alignment lip; 3 magnet
-                      pairs live in enlarged corners (apex + both wide-end
-                      corners), MAG-BOX style
+                      6 x 3 mm disc magnets in outward wall lobes (4 pairs;
+                      round boxes 3, 120° apart)
+  * magnet-flat     — flat lay-on lid with a small alignment lip; the magnet
+                      pairs live in enlarged corners, MAG-BOX style — one
+                      per convex corner (wedge 3, fan and combo 4; round
+                      boxes 3 bulges, 120° apart)
   * magnet-pedestal — magnet-flat shell + easy paper picking: a full-height
                       finger bay bulges outward mid-arc and the papers rest
                       on a pedestal floor whose edge stops short of the arc
@@ -80,13 +85,44 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 #           loose 100-pack drops in without squeezing: smooth Hario paper
 #           stacks ~32 mm/100, creped CAFEC paper ≈ its pouch thickness
 #           (40-50 mm/100) — see the README capacity notes.
+# shape     optional: outline family, default "wedge" (a flat folded cone
+#           paper: side / angle / tab_extra above). make_case() picks the Case
+#           class from CASE_CLASSES by it; "trapezoid" (flat-bottom fan papers)
+#           and "round" (paper discs) take their own keys instead of
+#           side / angle, documented here:
+#   "trapezoid" — a flat-bottom fan paper (Kalita 101/102/103 style) folded
+#           flat is a truncated sector: two straight sides meeting in a
+#           VIRTUAL apex, a straight bottom (crimp seam) edge across them and
+#           a top arc concentric with that apex. width / height / bottom
+#           describe a REFERENCE sheet of the size (typically its largest);
+#           fan_solve() derives angle / arc radius / apex distance from it,
+#           and that angle (+ ANGLE_SLACK) is the box's. The box is then
+#           sized so EVERY listed sheet fits pushed home — the widest bottom
+#           sets the bottom wall, the farthest-reaching sheet the arc, the
+#           shortest the pedestal moat — and tools/verify.py seats each one:
+#     width     top chord c, mm (corner to corner across the arc)
+#     height    centre-line height h, mm (bottom edge to arc, on the bisector)
+#     bottom    bottom (crimp seam) edge b, mm
+#     variants  optional: ((width, height, bottom), ...) the other real sheets
+#               the box must hold (other brands; a variant may be larger than
+#               the reference in one dimension) — add sheets here instead of
+#               taking per-dimension maxima: the angle depends on all three
+#     tab_extra 0.0 (fan papers have no hanging tab); never side / angle
+#               (rejected)
+#   "round" — flat paper discs (RoundCase); side / angle / tab_extra are
+#           rejected if present:
+#     diameter  the largest disc to hold, mm (interior Ø = diameter +
+#               2·DISC_SLACK). Size it to the biggest real sheet, not the spec.
+#     stack_h   optional: preview ghost stack height, mm — a typical pack
+#               (default PREVIEW_STACK_H, never above depth − 4)
 # combines  INSTEAD of side/angle/tab_extra: the slugs of two papers that one
 #           box should hold (-> ComboCase). Their wedges are overlaid against
 #           one shared straight wall — an asymmetric keyhole — and each keeps
 #           its own slack formula, so both fit exactly like in their own box.
 #           depth defaults to the deeper of the two. Adds divider STLs.
 # engrave_rot  optional: engraving rotation, deg (default -90 = upright when
-#           the wedge tip points at the reader; 0 = baseline along +X)
+#           the wedge tip / the box's -X end points at the reader; 0 =
+#           baseline along +X)
 
 PAPERS = {
     "deep27": {
@@ -130,6 +166,50 @@ PAPERS = {
         "tab_extra": 0.0,
         "depth": 54.0,      # 100-pack free stack ≈ 50 mm (pouch) + headroom
     },
+    # Kalita flat-bottom fan papers (TrapezoidCase). width x height x bottom
+    # is a reference sheet (sets the box angle); the box is sized so every
+    # listed sheet fits — reference + "variants", some larger in one
+    # dimension — and verify.py seats each one. Depth 58: never squeezed —
+    # FP bags 45/50 mm, NK 40/45, Kalita's boxed 100-sheet line ≈ 58 mm
+    # inside (with the flat lids' 2.5 mm lip: 55.5 mm along the walls).
+    "kalita-101": {
+        "display": "Kalita 101 (FP101 / NK101)",
+        "folder": "kalita",
+        "shape": "trapezoid",
+        "width": 138.0,     # top chord: retail 13.4-13.5 cm
+        "height": 80.0,     # centre height: retail 8 cm (40P box caps ~79)
+        "bottom": 53.0,     # crimped bottom edge: retail 50 (one source)
+        "variants": ((134.0, 80.0, 45.0), (134.0, 80.0, 50.0),
+                     (134.0, 80.0, 55.0)),
+        "tab_extra": 0.0,
+        "depth": 58.0,
+    },
+    "kalita-102": {
+        "display": "Kalita 102 (FP102 / NK102)",
+        "folder": "kalita",
+        "shape": "trapezoid",
+        "width": 165.0,     # retail 16 x 10 cm (Askul 102-size 16.5 x 10.2)
+        "height": 105.0,    # Kalita sheets 100-103; 105 = Melitta 1x2's height,
+                            # so that sheet keeps the full RADIAL_SLACK too
+        "bottom": 53.0,     # retail 50, Toyo 102 53; render trace ~45
+        "variants": ((160.0, 100.0, 44.0), (160.0, 100.0, 50.0),
+                     (160.0, 105.0, 47.0),    # Melitta 1x2
+                     (165.0, 103.0, 54.0)),   # Brooks 102 (1 mm wider bottom)
+        "tab_extra": 0.0,
+        "depth": 58.0,
+    },
+    "kalita-103": {
+        "display": "Kalita 103 (FP103 / NK103)",
+        "folder": "kalita",
+        "shape": "trapezoid",
+        "width": 195.0,     # retail 19.3 x 12.7 cm; Kalita boxes cap ~195
+        "height": 130.0,
+        "bottom": 56.0,     # no Kalita figure (Toyo 103: 53)
+        "variants": ((193.0, 127.0, 47.0), (193.0, 127.0, 53.0),
+                     (200.0, 130.0, 56.0)),   # last: generic 103-size
+        "tab_extra": 0.0,
+        "depth": 58.0,
+    },
     # One box for two papers (see ComboCase). References the entries above
     # instead of repeating their numbers, so it follows any re-measurement.
     # Holds a full 100-pack of either paper, or part packs of both with a
@@ -140,6 +220,27 @@ PAPERS = {
         "combines": ("deep27", "v60-01"),
         "engrave_rot": 0.0,  # baseline along the long shared wall: upright
                              # when that flat wall faces the reader
+    },
+    # AeroPress paper discs — round boxes (RoundCase). One sheet is ~0.12 mm
+    # (stacks measure 0.111-0.129 mm/sheet); the depth holds the WORST pack
+    # height plus the flat lids' 2.5 mm alignment lip, which in a close round
+    # bore comes down over the disc edges, plus margin (never squeezed).
+    "aeropress": {
+        "display": "AeroPress Standard (Original / Clear / Go / Premium)",
+        "folder": "aeropress",
+        "shape": "round",
+        "diameter": 65.0,   # spec Ø63.5 (2.5"); listings go up to Ø65. Also
+                            # Premium / Go Plus, and the Ø61-63.5 metal discs
+        "depth": 55.0,      # 350-pack: 44 mm typical, 50 worst case
+        "stack_h": 44.0,    # preview ghost: a typical 350-pack
+    },
+    "aeropress-xl": {
+        "display": "AeroPress XL",
+        "folder": "aeropress",
+        "shape": "round",
+        "diameter": 75.0,   # spec Ø73.7 (2.9"), measured up to Ø74
+        "depth": 35.0,      # 200-pack: 25 mm typical, 29 worst case
+        "stack_h": 25.0,    # preview ghost: a typical 200-pack
     },
 }
 
@@ -360,6 +461,23 @@ def diff(solid, *cutters):
     return trimesh.boolean.difference([solid, *cutters], check_volume=False)
 
 
+def clean_union(mesh, tol=1e-5):
+    """Manifold.simplify() pass over a unioned mesh: collapses the sub-µm
+    slivers that near-coincident faces leave behind (the pedestal plinth
+    unioned against cavity walls whose corner fillets are discretised
+    differently) — in memory they are zero-volume shells, but in a float32
+    STL their vertices merge into non-manifold edges. Moves no surface by
+    more than tol. Used by the newer shapes only: running it on the legacy
+    papers would rewrite their published STL bytes."""
+    import manifold3d
+    m = manifold3d.Manifold(manifold3d.Mesh(
+        vert_properties=np.asarray(mesh.vertices, dtype=np.float32),
+        tri_verts=np.asarray(mesh.faces, dtype=np.uint32))).simplify(tol)
+    out = m.to_mesh()
+    return trimesh.Trimesh(vertices=out.vert_properties[:, :3],
+                           faces=out.tri_verts, process=True)
+
+
 def slot_cutter(width, z0, z1, corner_r, centre_xy, normal_deg, span):
     """Rounded-corner slot prism.
 
@@ -549,7 +667,8 @@ class Case:
         return (
             self.interior.intersection(
                 Point(0.0, 0.0).buffer(
-                    self.r_int - MOAT_W - self.cfg["tab_extra"], quad_segs=QS))
+                    self.r_int - MOAT_W - self.cfg.get("tab_extra", 0.0),
+                    quad_segs=QS))
             .buffer(-2.0, quad_segs=QS)
             .buffer(2.0, quad_segs=QS)
         )
@@ -572,13 +691,22 @@ class Case:
             out.append((px, py))
         return out
 
-    def _step_out(self, start_xy, dir_deg, clearance):
-        """March from start_xy along dir_deg until clear of the interior."""
+    def _step_out(self, start_xy, dir_deg, clearance, max_steps=10000):
+        """March from start_xy along dir_deg until clear of the interior.
+        A heading that never leaves the interior (wrong sign, start on the
+        far side) raises after max_steps (1 m) instead of hanging."""
         d = math.radians(dir_deg)
         v = np.array([math.cos(d), math.sin(d)])
         p = np.array(start_xy, dtype=float)
+        steps = 0
         while Point(p).distance(self.interior) < clearance:
+            if steps >= max_steps:
+                raise ValueError(
+                    f"{self.slug}: _step_out from ({start_xy[0]:.2f}, "
+                    f"{start_xy[1]:.2f}) heading {dir_deg:g}° never clears "
+                    f"the interior by {clearance:g} mm in {max_steps} steps")
             p += v * 0.1
+            steps += 1
         return (float(p[0]), float(p[1]))
 
     def _flat_magnet_centres(self):
@@ -593,12 +721,38 @@ class Case:
 
     # -- cutters ---------------------------------------------------------------
 
+    # Per-shape sizing hooks. PROPERTIES on purpose, read at call time:
+    # apply_printer_args() rebinds the module globals after import, so a class
+    # attribute would freeze the defaults. Subclasses override them (e.g. a
+    # small round box: narrower scoop / engraving).
+
     @property
     def arc_notch_top(self):
         return PLINTH + ARC_NOTCH_H
 
+    @property
+    def scoop_w(self):
+        """Finger-scoop width at every grip arc."""
+        return SCOOP_W
+
+    @property
+    def friction_scoop_bottom(self):
+        """Friction-design scoop bottom (z); the magnet-skirt one derives
+        from the back notch instead (build_base)."""
+        return FLOOR_T + SCOOP_ABOVE_FLOOR
+
+    @property
+    def engrave_width(self):
+        """Total width of the engraved text block."""
+        return ENGRAVE_WIDTH
+
+    @property
+    def pedestal_cove(self):
+        """Width (= height) of the 45° wall cove on the pedestal top."""
+        return PEDESTAL_CHAMFER_WALL
+
     def scoop_cutters(self, bottom):
-        return [slot_cutter(SCOOP_W, bottom, self.base_h + 40.0, SCOOP_R,
+        return [slot_cutter(self.scoop_w, bottom, self.base_h + 40.0, SCOOP_R,
                             arc.xy(arc.r), arc.deg, 60.0)
                 for arc in self.grip_arcs]
 
@@ -659,6 +813,12 @@ class Case:
                 out.append(ramp)
         return out
 
+    def lid_notch_cutters(self, design):
+        """Grip-notch cutters of one telescoping design's lid (build_lid):
+        the side notches, plus the back thumb notch on magnet-skirt. A
+        subclass may return fewer (e.g. a twist-off round friction lid: [])."""
+        return self.notch_cutters(arc_notch=(design == "magnet-skirt"))
+
     def pry_cutter(self, cx, top):
         """Shallow slot under a flat lid's edge, mid-arc: thumbnail pry point
         (the lid's lip still backs it, so no dust path opens up)."""
@@ -693,7 +853,7 @@ class Case:
             geom = p if geom is None else geom.symmetric_difference(p)
 
         minx, miny, maxx, maxy = geom.bounds
-        s = ENGRAVE_WIDTH / (maxx - minx)
+        s = self.engrave_width / (maxx - minx)
         geom = affinity.scale(geom, xfact=s, yfact=s, origin=(0, 0))
         minx, miny, maxx, maxy = geom.bounds
         geom = affinity.translate(geom, -(minx + maxx) / 2.0, -(miny + maxy) / 2.0)
@@ -714,7 +874,7 @@ class Case:
     def build_base(self, design):
         if design == "friction":
             solid = prism(self.ext_plain, 0.0, self.base_h)
-            cutters = self.scoop_cutters(FLOOR_T + SCOOP_ABOVE_FLOOR)
+            cutters = self.scoop_cutters(self.friction_scoop_bottom)
         elif design == "magnet-skirt":
             solid = prism(self.ext_skirt, 0.0, self.base_h)
             # shorter scoop, riding above the back notch: a solid wall band
@@ -754,12 +914,12 @@ class Case:
                             .intersection(self.interior_ped))
                     parts += [prism(p, FLOOR_T - 0.5, FLOOR_T + (k + 1) * h)
                               for p in poly_parts(ring)]
-            if PEDESTAL_CHAMFER_WALL > 0.0:
+            if self.pedestal_cove > 0.0:
                 # cove where the pedestal top meets the side walls/apex —
                 # smooths the ring where the slab's solid section ends and
                 # opens up the sharp interior corner. Clipped to the plinth
                 # footprint so nothing overhangs the moat/bay unsupported.
-                s = PEDESTAL_CHAMFER_WALL
+                s = self.pedestal_cove
                 n = max(1, math.ceil(s / 0.2))
                 h = s / n
                 ped_top = FLOOR_T + PEDESTAL_H
@@ -805,8 +965,8 @@ class Case:
             top = self.base_h
             outer = inner.buffer(SKIRT_T, quad_segs=QS)
             solid = prism(outer, PLINTH, top + plate_t)
-            cutters = [prism(inner, PLINTH - 1.0, top)] + self.notch_cutters(
-                arc_notch=(design == "magnet-skirt"))
+            cutters = ([prism(inner, PLINTH - 1.0, top)]
+                       + self.lid_notch_cutters(design))
             if design == "magnet-skirt":
                 # pockets rise into the lid plate from its underside
                 cutters += pocket_cutters(self.magnets_skirt, top - 1.0,
@@ -826,6 +986,85 @@ class Case:
     def extras_for(self, design):
         """The extras that go with one design (ComboCase: its dividers)."""
         return list(self.extras)
+
+    # -- shared guards (a subclass's _check() calls the ones that apply) ------
+    # Each catches a failure that would otherwise pass SILENTLY — the meshes
+    # stay watertight while a pocket opens into the cavity, a notch holes the
+    # lid plate or the text runs off the lid. They only read the outlines, so
+    # calling them never changes a generated byte. The plain wedge does not
+    # call them (its layout predates them and is pinned by the hash gate).
+
+    def _fail(self, msg):
+        raise ValueError(f"{self.slug}: {msg}")
+
+    @staticmethod
+    def _is_simple(poly):
+        """One valid polygon without holes."""
+        return (poly.geom_type == "Polygon" and poly.is_valid
+                and not poly.interiors)
+
+    def _guard_pockets(self, min_skin=0.4):
+        """Every magnet pocket lies inside its design's exterior with at least
+        min_skin (0.4 = one perimeter) of wall to the cavity and outside."""
+        for design, centres, ext, cavity in (
+                ("magnet-skirt", self.magnets_skirt, self.ext_skirt,
+                 self.interior),
+                ("magnet-flat", self.magnets_flat, self.ext_flat,
+                 self.interior),
+                ("magnet-pedestal", self.magnets_flat, self.ext_ped,
+                 self.interior_ped)):
+            if design not in self.designs:  # a PAPERS "designs" subset
+                continue
+            for c in centres:
+                pocket = Point(c).buffer(POCKET_D / 2.0, quad_segs=QS)
+                if not ext.contains(pocket):
+                    self._fail(f"{design} pocket at ({c[0]:.1f}, {c[1]:.1f}) "
+                               "breaks out of the wall")
+                skin = min(pocket.distance(cavity),
+                           pocket.distance(ext.boundary))
+                if skin < min_skin:  # less than one perimeter round the magnet
+                    self._fail(f"{design} pocket at ({c[0]:.1f}, {c[1]:.1f}) "
+                               f"leaves only {skin:.2f} mm of wall "
+                               f"(need >= {min_skin:g})")
+
+    def _guard_side_notches_straight(self, tol=0.05):
+        """Every side-notch window sits on STRAIGHT wall, inside and out:
+        clear of rounded corners, shoulders and any lobe blend."""
+        for (px, py), nrm_deg in self._side_notch_frames():
+            tx, ty = polar(1.0, nrm_deg + 90.0)
+            ox, oy = polar(WALL_T, nrm_deg)
+            for t in (-NOTCH_W / 2.0, 0.0, NOTCH_W / 2.0):
+                q = (px + t * tx, py + t * ty)
+                off = max(
+                    Point(q).distance(self.interior.boundary),
+                    Point(q[0] + ox, q[1] + oy).distance(
+                        self.ext_skirt.boundary))
+                if off > tol:
+                    self._fail(f"grip notch at ({px:.1f}, {py:.1f}) is "
+                               f"{off:.2f} mm off its straight wall")
+
+    def _guard_grip_arcs_on_wall(self, tol=0.05):
+        """Scoop / back-notch / bay windows sit on plain arc wall at every
+        grip arc (no corner or shoulder within their half-width)."""
+        for arc in self.grip_arcs:
+            half_w = max(self.scoop_w, ARC_NOTCH_W, BAY_W) / 2.0 / arc.r
+            for da in (-half_w, 0.0, half_w):
+                q = polar(arc.r, arc.deg + math.degrees(da))
+                off = Point(q).distance(self.interior.boundary)
+                if off > tol:
+                    self._fail(f"mid-arc grips at {arc.deg:.1f}° run "
+                               f"{off:.2f} mm off their arc wall (corner or "
+                               "shoulder too close)")
+
+    def _guard_text_fits(self, margin=4.0):
+        """The engraving's bounding box lies on the lid core (interior less
+        margin) and clear of every magnet pocket."""
+        text = shp_box(*self.text_geometry().bounds)
+        if not text.within(self.interior.buffer(-margin, quad_segs=QS)):
+            self._fail("engraving runs off the lid core")
+        for c in self.magnets_skirt + self.magnets_flat:
+            if text.distance(Point(c)) < POCKET_D / 2.0 + 2.0:
+                self._fail("engraving collides with a magnet pocket")
 
     # -- preview-only ghosts --------------------------------------------------
 
@@ -884,6 +1123,16 @@ class Case:
         return (f"{self.side:.0f} mm side · {self.angle:.0f}° wedge ·\n"
                 f"       {tab_txt}")
 
+    @property
+    def grip_txt(self):
+        """Preview "Grip" row (shown when the paper has magnet-skirt): the
+        telescoping lids' notches — side notches on both, the back thumb
+        notch on magnet-skirt."""
+        return (f"side notches {NOTCH_W:.1f} x {NOTCH_H:.1f} mm; "
+                f"skirt back notch {ARC_NOTCH_W:.1f} x "
+                f"{ARC_NOTCH_H:.1f} mm, {ARC_NOTCH_GAP:.1f} mm band "
+                f"to its scoop")
+
     # -- output naming ---------------------------------------------------------
 
     @property
@@ -905,6 +1154,375 @@ class Case:
         if self.cfg["folder"] == self.slug:
             return "preview.html"
         return f"preview-{self.short}.html"
+
+
+# --------------------------------------------------------------------------
+# SHAPE REGISTRY — PAPERS "shape" (default "wedge") -> Case class. make_case()
+# dispatches on it; "combines" entries always build a ComboCase. A new shape
+# class registers with ONE line right after its class:
+#     CASE_CLASSES["<shape>"] = <ShapeCase>
+# --------------------------------------------------------------------------
+
+CASE_CLASSES = {"wedge": Case}
+
+
+# --------------------------------------------------------------------------
+# TRAPEZOID CASE — flat-bottom fan papers (PAPERS "shape": "trapezoid")
+# --------------------------------------------------------------------------
+# A fan paper folded flat is a truncated sector (see PAPERS "trapezoid"). The
+# box keeps the wedge's frame — the paper's VIRTUAL apex at the origin,
+# opening along +X, arc concentric with it — and just cuts the apex off with
+# a flat bottom wall, so every mid-arc feature (scoop, back thumb notch, pry
+# slot, finger bay, moat) and the corner-magnet stepping run unchanged.
+
+TRAP_SIDE_CLEAR = 2.0    # pushed home, a sheet's bottom corners keep this gap
+                         # (mm, square to the wall) to the side walls — the
+                         # naive "bottom wall RADIAL_SLACK behind the sheet"
+                         # left ~0 there and the stack would wedge in the
+                         # corners. The angle slack widens it toward the arc.
+TRAP_WALL_MARGIN = 2.0   # plain straight wall kept between a side-notch
+                         # window and the bottom-corner fillet / the blend of
+                         # the side magnet lobe (magnet-skirt)
+
+
+def fan_solve(width, height, bottom):
+    """Flat fan paper (top chord c, centre height h, bottom edge b) ->
+    (angle_deg, R, d): full angle between the straight sides, top-arc radius
+    and bottom-edge distance, both from the virtual apex.
+
+    Solves c/(2 sin t) - b/(2 tan t) = h for the half angle t by bisection
+    (fixed iteration count -> deterministic). The left side falls steadily
+    from +inf to sqrt(c² - b²)/2 on (0, acos(b/c)); the narrow root there is
+    the paper (a second, blunt root past acos(b/c) is not a fan sheet)."""
+    c, h, b = float(width), float(height), float(bottom)
+    if not 0.0 < b < c or h <= math.sqrt(c * c - b * b) / 2.0:
+        raise ValueError(
+            f"no flat fan sheet is {c:g} wide x {h:g} high with a {b:g} mm "
+            f"bottom (need bottom < width and height > "
+            f"{math.sqrt(max(c * c - b * b, 0.0)) / 2.0:.1f})")
+    lo, hi = 1e-9, math.acos(b / c)
+    for _ in range(200):
+        t = 0.5 * (lo + hi)
+        if (c - b * math.cos(t)) / (2.0 * math.sin(t)) > h:
+            lo = t
+        else:
+            hi = t
+    t = 0.5 * (lo + hi)
+    return 2.0 * math.degrees(t), c / (2.0 * math.sin(t)), b / (2.0 * math.tan(t))
+
+
+def fan_outline(angle_deg, radius, bottom_x, steps_per_deg=2.0):
+    """Flat fan sheet, virtual apex at the origin, opening along +X: the
+    sector clipped by its straight bottom edge at x = bottom_x."""
+    return sector_poly(angle_deg, radius, steps_per_deg).intersection(
+        shp_box(bottom_x, -radius, radius + 1.0, radius))
+
+
+class TrapezoidCase(Case):
+    """Flat-bottom fan papers (Kalita 101/102/103): a wedge box whose apex is
+    cut off by a flat bottom wall the sheets' crimped bottom edge rests on.
+
+    Interior = the reference sheet's angle + ANGLE_SLACK about the virtual
+    apex, clipped at x_bottom and filleted INNER_ROUND, sized over EVERY
+    registry sheet (reference + variants): x_bottom is set by the WIDEST
+    bottom edge and the bottom-corner gap (TRAP_SIDE_CLEAR), not by a fixed
+    slack behind the sheet — pushed home, each bottom edge rests on the
+    flat bottom wall with its corners clear of the side walls and fillets;
+    r_int leaves RADIAL_SLACK beyond the farthest pushed-home arc, and the
+    pedestal plinth stops MOAT_W - RADIAL_SLACK short of the SHORTEST one.
+
+    Grips: two side notches clamped onto the plain straight run of the side
+    walls (never in a fillet); magnet-skirt 4 pairs (2 on the arc as on the
+    wedge + 1 per side, beyond its notch); magnet-flat / pedestal 4 pairs,
+    one per convex corner (both bottom corners + both arc corners). Never
+    sets side / angle / apex_tip_x, so no wedge formula runs on it unnoticed.
+    """
+
+    def __init__(self, slug):
+        super().__init__(slug)
+        self._check()
+
+    def _derive_paper_geometry(self):
+        cfg = self.cfg
+        # never side / angle (like the round case): a wedge formula reached
+        # by mistake must crash instead of building junk
+        stray = [k for k in ("side", "angle") if k in cfg]
+        if stray:
+            raise ValueError(
+                f"{self.slug}: a trapezoid paper takes 'width' / 'height' / "
+                "'bottom', not " + " / ".join(stray))
+        # the REFERENCE sheet sets the box angle; the box is sized so that
+        # every listed sheet (reference + variants) fits pushed home
+        self.sheet = (cfg["width"], cfg["height"], cfg["bottom"])
+        self.sheets = [self.sheet] + [tuple(v) for v in cfg.get("variants", ())]
+        self.fans = []
+        for c, hh, b in self.sheets:
+            try:
+                self.fans.append(fan_solve(c, hh, b))
+            except ValueError as e:
+                raise ValueError(f"{self.slug}: {e}") from None
+        self.fan_angle, self.fan_r, self.fan_d = self.fans[0]
+        self.int_angle = self.fan_angle + ANGLE_SLACK
+        self.int_half = self.int_angle / 2.0
+        h = math.radians(self.int_half)
+        # the obtuse bottom corner's fillet runs this far along each wall;
+        # every sheet's corner must land on the flat bottom wall before it
+        self.fillet_run = INNER_ROUND * math.tan((math.pi / 2.0 - h) / 2.0)
+        self.side_gap = max(TRAP_SIDE_CLEAR, self.fillet_run * math.cos(h))
+        # the WIDEST bottom edge sets the bottom wall: its corners keep
+        # side_gap square to the side walls, and the flat wall left between
+        # them and the fillets is corner_run (every narrower sheet: more)
+        self.bottom_max = max(b for _, _, b in self.sheets)
+        self.x_bottom = ((self.bottom_max / 2.0 + self.side_gap / math.cos(h))
+                         / math.tan(h))
+        self.corner_run = self.side_gap / math.cos(h) - self.fillet_run
+        # where the reference sheet's virtual apex sits pushed home (bottom
+        # edge on the bottom wall) — the analogue of a wedge's apex_tip_x
+        self.home_dx = self.x_bottom - self.fan_d
+        # pushed home, each sheet's arc is concentric with its own virtual
+        # apex at x_bottom - d: on the bisector it reaches x_bottom + h; its
+        # point farthest from the box's apex is that bisector point while
+        # the sheet's apex sits in front of the box's (else its arc corner)
+        self.sheet_reach = [self.x_bottom + hh for _, hh, _ in self.sheets]
+        far = []
+        for angle, radius, d in self.fans:
+            s = self.x_bottom - d
+            if s >= 0.0:
+                far.append(s + radius)
+            else:
+                far.append(math.sqrt(
+                    s * s + 2.0 * s * radius * math.cos(math.radians(angle / 2.0))
+                    + radius * radius))
+        self.r_int = max(far) + RADIAL_SLACK + cfg.get("tab_extra", 0.0)
+        # pedestal: the SHORTEST sheet's pushed-home arc edge still overhangs
+        # the moat by MOAT_W - RADIAL_SLACK at the bay (cf. tab_extra
+        # widening the moat on the V60 boxes) — the taller ones overhang more
+        self.plinth_r = min(self.sheet_reach) + RADIAL_SLACK - MOAT_W
+        self.depth = cfg.get("depth", DEPTH)
+        self.grip_arcs = [BisectorFrame(self.r_int)]
+        self.interior = (
+            sector_poly(self.int_angle, self.r_int)
+            .intersection(shp_box(self.x_bottom, -self.r_int,
+                                  self.r_int + 1.0, self.r_int))
+            .buffer(-INNER_ROUND, quad_segs=QS)
+            .buffer(INNER_ROUND, quad_segs=QS)
+        )
+        self.engrave_xy = (self.interior.centroid.x, 0.0)
+
+    # -- straight side walls -----------------------------------------------------
+
+    def _side_frame(self, rho, side):
+        """Point rho mm from the virtual apex along the +1 / -1 side wall's
+        interior face, and that wall's outward normal (deg)."""
+        return (polar(rho, side * self.int_half),
+                side * (self.int_half + 90.0))
+
+    @property
+    def side_run(self):
+        """(rho_lo, rho_hi): the plain straight part of each side wall,
+        measured from the virtual apex — between the two corner fillets."""
+        rho_b = self.x_bottom / math.cos(math.radians(self.int_half))
+        return rho_b + self.fillet_run, self.r_int - INNER_ROUND
+
+    @property
+    def notch_rho(self):
+        """Side-notch centre: NOTCH_FRAC as on the wedge, clamped so the
+        window keeps TRAP_WALL_MARGIN of plain wall to both fillets."""
+        lo, hi = self.side_run
+        half = NOTCH_W / 2.0 + TRAP_WALL_MARGIN
+        return min(max(NOTCH_FRAC * self.r_int, lo + half), hi - half)
+
+    @property
+    def lobe_reach(self):
+        """How far a magnet lobe's blended footprint can run along the wall
+        from its centre (lobe + the CORNER_BLEND_R closing — an upper
+        bound)."""
+        return LOBE_R + CORNER_BLEND_R
+
+    @property
+    def side_magnet_rho(self):
+        """Side magnet: MAG_SIDE_FRAC as on the wedge, clamped beyond the
+        notch window (TRAP_WALL_MARGIN of plain wall before the lobe blend)
+        and short of the arc-corner fillet."""
+        lo, hi = self.side_run
+        return min(max(MAG_SIDE_FRAC * self.r_int,
+                       self.notch_rho + NOTCH_W / 2.0 + TRAP_WALL_MARGIN
+                       + self.lobe_reach),
+                   hi - TRAP_WALL_MARGIN - self.lobe_reach)
+
+    def _side_notch_frames(self):
+        return [self._side_frame(self.notch_rho, side) for side in (+1, -1)]
+
+    def _plinth(self):
+        """Pedestal plinth: as the wedge's, but its radius comes from the
+        SHORTEST registry sheet (plinth_r), so every sheet's pushed-home arc
+        edge overhangs the moat by at least MOAT_W - RADIAL_SLACK."""
+        return (
+            self.interior.intersection(
+                Point(0.0, 0.0).buffer(self.plinth_r, quad_segs=QS))
+            .buffer(-2.0, quad_segs=QS)
+            .buffer(2.0, quad_segs=QS)
+        )
+
+    def build_base(self, design):
+        base = super().build_base(design)
+        # the pedestal's union leaves zero-volume slivers at the bottom-
+        # corner fillets that turn non-manifold in the float32 STL
+        return clean_union(base) if design == "magnet-pedestal" else base
+
+    def home_sheet(self, i, gap=0.0):
+        """Registry sheet i (0 = reference) pushed home: centred on the
+        bisector, its bottom edge `gap` mm off the bottom wall."""
+        angle, radius, d = self.fans[i]
+        return affinity.translate(fan_outline(angle, radius, d),
+                                  xoff=self.x_bottom - d + gap)
+
+    # -- magnet layouts ----------------------------------------------------------
+
+    def _skirt_magnet_centres(self):
+        """magnet-skirt: 2 on the arc (wedge angles) + 1 per straight side."""
+        out = [polar(self.r_int + MAG_OFFSET, a) for a in MAG_ARC_ANGLES]
+        for side in (+1, -1):
+            (px, py), nrm = self._side_frame(self.side_magnet_rho, side)
+            ox, oy = polar(MAG_OFFSET, nrm)
+            out.append((px + ox, py + oy))
+        return out
+
+    def _flat_magnet_centres(self):
+        """magnet-flat / pedestal: one pair per convex corner — both bottom
+        corners, then both arc corners — stepped out along the bisector of
+        the two outward normals that meet there."""
+        clr = POCKET_D / 2.0 + 1.3
+        y_b = self.x_bottom * math.tan(math.radians(self.int_half))
+        out = [self._step_out((self.x_bottom, side * y_b),
+                              side * (135.0 + self.int_half / 2.0), clr)
+               for side in (+1, -1)]
+        out += [self._step_out(polar(self.r_int, side * self.int_half),
+                               side * (self.int_half + 45.0), clr)
+                for side in (+1, -1)]
+        return out
+
+    # -- guards --------------------------------------------------------------------
+
+    def _check(self):
+        """Each of these would otherwise pass silently: the meshes stay
+        watertight while a sheet wedges in a corner, a notch window bites
+        into a fillet or a lobe, or a pocket opens into the scoop."""
+        fail = self._fail
+        if not self._is_simple(self.interior):
+            fail("the interior is not one simple polygon")
+        # EVERY registry sheet, pushed home (a hair off the bottom wall),
+        # fits, and both its bottom corners land on the FLAT bottom wall —
+        # measured on the interior polygon: the wall left between a corner
+        # and the fillet must be >= corner_run (what the widest bottom keeps
+        # by construction) - 0.05; a corner past the flat run sits on a
+        # fillet and the stack would ride up it / wedge
+        x0 = self.interior.bounds[0]
+        flat_y = [y for x, y in self.interior.exterior.coords
+                  if x < x0 + 1e-6]
+        flat = LineString([(x0, min(flat_y)), (x0, max(flat_y))])
+        wall = self.interior.exterior.difference(flat.buffer(1e-6))
+        for i, (c, hh, b) in enumerate(self.sheets):
+            name = f"the {c:g} x {hh:g} x {b:g} sheet"
+            for side in (+1, -1):
+                y = side * b / 2.0
+                run = Point(self.x_bottom + 0.02, y).distance(wall)
+                if not min(flat_y) < y < max(flat_y):
+                    fail(f"{name}'s bottom corners land on the corner "
+                         "fillets")
+                if run < self.corner_run - 0.05:
+                    fail(f"{name}'s bottom corner keeps only {run:.2f} mm of "
+                         "flat bottom wall before the corner fillet (need "
+                         f">= {self.corner_run:.2f})")
+            if not self.interior.contains(self.home_sheet(i, 0.02)):
+                fail(f"{name} does not fit pushed home")
+        # the reference sheet (it sets the angle) keeps >= side_gap to every
+        # wall above the corner zone
+        sheet = self.home_sheet(0, 0.02)
+        upper = sheet.buffer(self.side_gap - 0.05, quad_segs=QS).difference(
+            shp_box(0.0, -self.r_int, self.x_bottom + INNER_ROUND,
+                    self.r_int))
+        if not upper.within(self.interior):
+            fail(f"the reference sheet pushed home does not keep "
+                 f"{self.side_gap:.2f} mm to the side walls")
+        # side walls: notch window, then the magnet lobe, on plain straight
+        # wall with TRAP_WALL_MARGIN between them and to both fillets (the
+        # 101's straight side is only ~67 mm long)
+        lo, hi = self.side_run
+        rn, rm, reach = self.notch_rho, self.side_magnet_rho, self.lobe_reach
+        eps = 1e-6
+        if (rn - NOTCH_W / 2.0 < lo + TRAP_WALL_MARGIN - eps
+                or rn + NOTCH_W / 2.0 > hi - TRAP_WALL_MARGIN + eps):
+            fail(f"a {NOTCH_W:g} mm grip notch does not fit on the "
+                 f"{hi - lo:.1f} mm straight side wall")
+        if (rm - reach < rn + NOTCH_W / 2.0 + TRAP_WALL_MARGIN - eps
+                or rm + reach > hi - TRAP_WALL_MARGIN + eps):
+            fail(f"the side magnet lobe does not fit beside the {NOTCH_W:g} "
+                 f"mm grip notch on the {hi - lo:.1f} mm straight side wall")
+        # measured: the notch window through base wall + skirt stays clear
+        # of the lobe blend. 0.05 = the straight-wall tolerance of the
+        # notch checks: the lobes' closing re-discretises the corner arcs and
+        # tilts the plain run by a few hundredths (e.g. 0.04 at --wall-t 3)
+        blend = self.ext_skirt.difference(
+            self.ext_plain.buffer(0.05, quad_segs=QS))
+        span = WALL_T + max(CLEAR_FRICTION, CLEAR_MAGNET) + SKIRT_T + 1.0
+        for (px, py), nrm in self._side_notch_frames():
+            window = affinity.translate(affinity.rotate(
+                shp_box(-1.0, -NOTCH_W / 2.0, span, NOTCH_W / 2.0), nrm,
+                origin=(0, 0)), px, py)
+            if window.distance(blend) < 1.0:
+                fail(f"grip notch at ({px:.1f}, {py:.1f}) runs into the side "
+                     "magnet lobe")
+        self._guard_pockets()
+        self._guard_side_notches_straight()
+        self._guard_grip_arcs_on_wall()
+        # arc lobes: on plain arc wall (clear of the arc-corner fillets) and
+        # their pockets clear of the scoop slot through the wall
+        arc = self.grip_arcs[0]
+        plain_deg = self.int_half - math.degrees(
+            (INNER_ROUND + reach) / arc.r)
+        scoop = shp_box(arc.r - 30.0, -self.scoop_w / 2.0,
+                        arc.r + 30.0, self.scoop_w / 2.0)
+        for a, c in zip(MAG_ARC_ANGLES, self.magnets_skirt):
+            if abs(a) > plain_deg:
+                fail(f"the arc magnet lobe at {a:g}° runs into an arc corner")
+            if Point(c).buffer(POCKET_D / 2.0, quad_segs=QS).distance(
+                    scoop) < 1.0:
+                fail(f"--scoop-w {self.scoop_w:g} opens into the arc magnet "
+                     f"pocket at {a:g}°")
+        self._guard_text_fits()
+
+    # -- preview-only ghost -----------------------------------------------------
+
+    def paper_ghost(self, lift=0.0):
+        """The reference sheet's stack, pushed home (1 mm off the bottom wall
+        so the faces don't fight in the preview)."""
+        poly = self.home_sheet(0, 1.0)
+        return prism(poly, FLOOR_T + lift + 0.3,
+                     FLOOR_T + lift + 0.3 + PREVIEW_STACK_H)
+
+    # -- wording -----------------------------------------------------------------
+
+    @property
+    def paper_txt(self):
+        c, h, b = self.sheet
+        return (f"{c:.0f} x {h:.0f} mm fan, {b:.0f} mm flat bottom, "
+                f"{self.fan_angle:.0f}°")
+
+    @property
+    def interior_txt(self):
+        flat = 2.0 * self.x_bottom * math.tan(math.radians(self.int_half))
+        return (f"{self.r_int - self.x_bottom:.0f} mm x "
+                f"{self.int_angle:.0f}° (flat bottom {flat:.0f} mm)")
+
+    @property
+    def geo_txt(self):
+        c, h, b = self.sheet
+        return (f"{c:.0f} x {h:.0f} mm fan · {b:.0f} mm flat bottom ·\n"
+                f"       {self.fan_angle:.0f}° · no tab")
+
+
+CASE_CLASSES["trapezoid"] = TrapezoidCase
 
 
 # --------------------------------------------------------------------------
@@ -949,6 +1567,14 @@ class ComboCase(Case):
             raise ValueError(
                 f"{self.slug}: 'combines' must name exactly two different "
                 f"plain PAPERS entries (got {names!r})")
+        # the keyhole overlays two WEDGES (side / angle / apex_tip_x); any
+        # other shape would be read as a wedge, or crash far from the cause
+        odd = [n for n in names if PAPERS[n].get("shape", "wedge") != "wedge"]
+        if odd:
+            raise ValueError(
+                f"{self.slug}: 'combines' members must be wedge papers, but "
+                + ", ".join(f"{n} is shape {PAPERS[n]['shape']!r}"
+                            for n in odd))
         self.far, self.fan = self.sectors = sorted(
             (Case(s) for s in names), key=lambda c: -c.r_int)
         if not self.far.int_angle < self.fan.int_angle:
@@ -1185,59 +1811,19 @@ class ComboCase(Case):
         """Every failure here would otherwise pass silently: the meshes stay
         watertight while a pocket opens into the cavity, a notch holes the
         lid plate or the text runs off the lid."""
-        def fail(msg):
-            raise ValueError(f"{self.slug}: {msg}")
+        fail = self._fail
 
-        def simple(poly):
-            return (poly.geom_type == "Polygon" and poly.is_valid
-                    and not poly.interiors)
-
-        if not simple(self.interior):
+        if not self._is_simple(self.interior):
             fail("the combined interior is not one simple polygon")
-        if (not simple(self.plinth)
+        if (not self._is_simple(self.plinth)
                 or self.plinth.area < 0.4 * self.interior.area
                 or self.plinth.difference(self.interior).area > 1e-6):
             fail("the stepped pedestal plinth is degenerate")
-        for design, centres, ext, cavity in (
-                ("magnet-skirt", self.magnets_skirt, self.ext_skirt,
-                 self.interior),
-                ("magnet-flat", self.magnets_flat, self.ext_flat,
-                 self.interior),
-                ("magnet-pedestal", self.magnets_flat, self.ext_ped,
-                 self.interior_ped)):
-            for c in centres:
-                pocket = Point(c).buffer(POCKET_D / 2.0, quad_segs=QS)
-                if not ext.contains(pocket):
-                    fail(f"{design} pocket at ({c[0]:.1f}, {c[1]:.1f}) "
-                         "breaks out of the wall")
-                skin = min(pocket.distance(cavity),
-                           pocket.distance(ext.boundary))
-                if skin < 0.4:  # less than one perimeter around the magnet
-                    fail(f"{design} pocket at ({c[0]:.1f}, {c[1]:.1f}) "
-                         f"leaves only {skin:.2f} mm of wall (need >= 0.4)")
-        # side-notch windows must sit on STRAIGHT wall, inside and out: clear
-        # of the rounded shoulder, the corner fillets and any lobe blend
-        for (px, py), nrm_deg in self._side_notch_frames():
-            tx, ty = polar(1.0, nrm_deg + 90.0)
-            ox, oy = polar(WALL_T, nrm_deg)
-            for t in (-NOTCH_W / 2.0, 0.0, NOTCH_W / 2.0):
-                q = (px + t * tx, py + t * ty)
-                off = max(
-                    Point(q).distance(self.interior.boundary),
-                    Point(q[0] + ox, q[1] + oy).distance(
-                        self.ext_skirt.boundary))
-                if off > 0.05:
-                    fail(f"grip notch at ({px:.1f}, {py:.1f}) is {off:.2f} "
-                         "mm off its straight wall")
-        # scoop / back-notch / bay windows must sit on plain arc wall
-        for arc in self.grip_arcs:
-            half_w = max(SCOOP_W, ARC_NOTCH_W, BAY_W) / 2.0 / arc.r
-            for da in (-half_w, 0.0, half_w):
-                q = polar(arc.r, arc.deg + math.degrees(da))
-                off = Point(q).distance(self.interior.boundary)
-                if off > 0.05:
-                    fail(f"mid-arc grips at {arc.deg:.1f}° run {off:.2f} mm "
-                         "off their arc wall (corner or shoulder too close)")
+        self._guard_pockets()
+        # side-notch windows on STRAIGHT wall: clear of the rounded shoulder,
+        # the corner fillets and any lobe blend
+        self._guard_side_notches_straight()
+        self._guard_grip_arcs_on_wall()
 
         # dividers: one hole per paper zone — whichever stack lies on top,
         # the other hole stays uncovered
@@ -1291,8 +1877,8 @@ class ComboCase(Case):
                  f"radial play (need >= {DIVIDER_FAR_PLAY:g})")
         far_arc = self.grip_arcs[0]
         window = affinity.rotate(
-            shp_box(far_arc.r - 20.0, -max(SCOOP_W, BAY_W) / 2.0,
-                    far_arc.r + 20.0, max(SCOOP_W, BAY_W) / 2.0),
+            shp_box(far_arc.r - 20.0, -max(self.scoop_w, BAY_W) / 2.0,
+                    far_arc.r + 20.0, max(self.scoop_w, BAY_W) / 2.0),
             far_arc.deg, origin=(0, 0))
         for foot in self.table_feet:
             if (foot.geom_type != "Polygon" or foot.distance(window) < 3.0
@@ -1300,12 +1886,7 @@ class ComboCase(Case):
                     < PEDESTAL_CHAMFER_BOTTOM + 1.0):
                 fail("a table foot fouls the far scoop / finger bay or the "
                      "pedestal's foot chamfer")
-        text = shp_box(*self.text_geometry().bounds)
-        if not text.within(self.interior.buffer(-4.0, quad_segs=QS)):
-            fail("engraving runs off the lid core")
-        for c in self.magnets_skirt + self.magnets_flat:
-            if text.distance(Point(c)) < POCKET_D / 2.0 + 2.0:
-                fail("engraving collides with a magnet pocket")
+        self._guard_text_fits()
 
     # -- preview-only ghosts --------------------------------------------------
 
@@ -1387,8 +1968,324 @@ class ComboCase(Case):
                 + " wedges,\n       one shared wall · plate or table divider")
 
 
+# --------------------------------------------------------------------------
+# ROUND CASE — flat paper discs (PAPERS "shape": "round")
+# --------------------------------------------------------------------------
+# Centre at the origin, the mid-arc grips (scoop, back thumb notch, pry slot,
+# finger bay) on +X like every other case, so the shared builders run as-is.
+# The absolute sizes tuned on 150 mm wedges don't fit a ~70 mm circle, hence
+# the round layout below. A future nested-cup variant (Kalita Wave / basket
+# filters) can subclass RoundCase and override sheet_outline / paper_ghost.
+
+DISC_SLACK = 1.0          # radial slack round the discs (Ø65 -> Ø67 bore): a
+                          # flat disc can't wedge, 1 mm all round is plenty
+ROUND_SEGMENTS = 720      # interior = regular 720-gon (2 vertices / degree)
+                          # whose INSCRIBED radius is r_int — never undersized
+ROUND_SCOOP_SCALE = 0.75  # scoop width = SCOOP_W x this: 27 mm by default (a
+                          # 36 mm scoop would take 64° of a Ø67 wall); a
+                          # --scoop-w override scales the same way
+ROUND_ENGRAVE_FRAC = 1.4  # engraving width = this x r_int (47 / 54 mm),
+                          # capped at ENGRAVE_WIDTH (60 runs off a Ø67 lid core)
+# Layout round the circle, deg (0° = scoop + back thumb notch, +X). The two
+# magnet-skirt side notches at ±120° and the thumb notch at 0° make a tripod
+# grip: fingers hold the base through the side notches, the thumb pushes the
+# back ledge up. The three lobes sit midway between the windows, 60° clear of
+# each, so the ±60° pairs nearest the thumb peel first and the 180° pair is
+# the hinge. Lobes and flat-lid bulges are 120°-symmetric: a lid put on
+# turned by 120° still fits and snaps (glue all base magnets same pole up).
+ROUND_NOTCH_DEG = 120.0
+ROUND_SKIRT_MAG_DEGS = (60.0, 180.0, -60.0)
+ROUND_FLAT_MAG_DEGS = (180.0, 60.0, -60.0)
+ROUND_MIN_GAP = 3.0       # plain wall/skirt between any two of: side notches,
+                          # back notch, scoop, magnet lobes (mm)
+ROUND_MIN_BAND = 0.8      # solid band any skirt window must keep below the
+                          # scoop (the --arc-notch-gap floor: else a dust slit)
+
+
+def disc_poly(r, n=ROUND_SEGMENTS):
+    """Regular n-gon about the origin whose INSCRIBED circle is r (so it
+    never cuts inside the true circle). Edge midpoints sit at multiples of
+    360/n degrees — on the axes and at ±60° / ±120° for n = 720."""
+    rv = r / math.cos(math.pi / n)
+    return Polygon([polar(rv, (k + 0.5) * 360.0 / n) for k in range(n)])
+
+
+def slot_footprint(width, span, xy, normal_deg):
+    """XY footprint of slot_cutter(width, ..., xy, normal_deg, span)."""
+    fp = shp_box(-span / 2.0, -width / 2.0, span / 2.0, width / 2.0)
+    fp = affinity.rotate(fp, normal_deg, origin=(0, 0))
+    return affinity.translate(fp, *xy)
+
+
+class RoundCase(Case):
+    """Round box for stacks of flat paper discs (PAPERS "shape": "round").
+
+    One BisectorFrame grip arc at r_int on +X, like a plain wedge, so scoop,
+    back thumb notch + ramp, pry slot, lids, lip, recess and pockets come
+    from the shared builders, and so does the finger bay. Own: the magnet /
+    notch angles (ROUND_*), a D-shaped pedestal plinth (moat only in front
+    of the bay — the floppy discs keep the most support), a narrower scoop
+    and engraving, and a TWIST-OFF friction lid without grip notches (user
+    decision: a round lid turns, so a notch could land over the scoop and
+    open a dust slit).
+    """
+
+    def __init__(self, slug):
+        super().__init__(slug)
+        self._check()
+
+    def _derive_paper_geometry(self):
+        # no side / angle / half / apex_tip_x on purpose (like the combo): a
+        # wedge formula reached by mistake crashes instead of building junk
+        cfg = self.cfg
+        wedge_keys = [k for k in ("side", "angle", "tab_extra") if k in cfg]
+        if wedge_keys:
+            raise ValueError(
+                f"{self.slug}: a round paper takes 'diameter', not "
+                + " / ".join(wedge_keys))
+        self.diameter = float(cfg["diameter"])
+        self.r_disc = self.diameter / 2.0
+        self.r_int = self.r_disc + DISC_SLACK
+        self.depth = cfg.get("depth", DEPTH)
+        # no INNER_ROUND opening: a circle has no corners to fillet
+        self.interior = disc_poly(self.r_int)
+        self.engrave_xy = (0.0, 0.0)
+        self.grip_arcs = [BisectorFrame(self.r_int)]
+
+    # -- layouts -----------------------------------------------------------------
+
+    def _skirt_magnet_centres(self):
+        """magnet-skirt: 3 lobes midway between the three grip windows."""
+        return [polar(self.r_int + MAG_OFFSET, a) for a in ROUND_SKIRT_MAG_DEGS]
+
+    def _flat_magnet_centres(self):
+        """magnet-flat/pedestal: 3 bulges at 120°, so the round lid snaps
+        aligned in any of its three orientations (the pedestal lid is keyed
+        by the bay). Same clearance _step_out would march to, on a circle."""
+        clr = POCKET_D / 2.0 + 1.3
+        return [polar(self.r_int + clr, a) for a in ROUND_FLAT_MAG_DEGS]
+
+    def _side_notch_frames(self):
+        """magnet-skirt lid only (the friction lid is twist-off): ±120°."""
+        return [(polar(self.r_int, s * ROUND_NOTCH_DEG), s * ROUND_NOTCH_DEG)
+                for s in (+1, -1)]
+
+    # _bay / _bays: inherited. On the raw box the r6 inner fillets barely
+    # reach into a small bore, but the CORNER_BLEND_R closing that builds
+    # interior_ped fills the junction: the channel keeps 33.85 of BAY_W 34 mm
+    # on Ø67 (measured; verify checks it), so no round-specific bay.
+
+    def _plinth(self):
+        """D-shaped pedestal: the whole disc rests on it except a MOAT_W
+        segment in front of the bay. Pushed away from the bay (the worst
+        case) a disc still overhangs the moat by MOAT_W − 2·DISC_SLACK."""
+        r = self.r_int
+        return (
+            self.interior.intersection(
+                shp_box(-2.0 * r, -2.0 * r, r - MOAT_W, 2.0 * r))
+            .buffer(-2.0, quad_segs=QS)
+            .buffer(2.0, quad_segs=QS)
+        )
+
+    # -- sizing hooks --------------------------------------------------------------
+
+    @property
+    def scoop_w(self):
+        return ROUND_SCOOP_SCALE * SCOOP_W
+
+    @property
+    def engrave_width(self):
+        return min(ENGRAVE_WIDTH, ROUND_ENGRAVE_FRAC * self.r_int)
+
+    @property
+    def pedestal_cove(self):
+        """The wall cove runs all round the bore, under the disc edges: kept
+        DISC_SLACK - 0.2 narrow (0.8 mm by default) so a centred disc of the
+        largest size still lies flat on the plinth. --chamfer-side-wall
+        still applies when it is smaller."""
+        return min(PEDESTAL_CHAMFER_WALL, DISC_SLACK - 0.2)
+
+    def build_base(self, design):
+        base = super().build_base(design)
+        # see TrapezoidCase.build_base: same pedestal-union slivers
+        return clean_union(base) if design == "magnet-pedestal" else base
+
+    def lid_notch_cutters(self, design):
+        # twist-off friction lid: no notches at all (user decision)
+        if design == "friction":
+            return []
+        return super().lid_notch_cutters(design)
+
+    # -- guards ------------------------------------------------------------------
+
+    def _check(self):
+        """Layout guards — each catches a failure that would otherwise pass
+        silently (the meshes stay watertight)."""
+        fail = self._fail
+        if not self._is_simple(self.interior):
+            fail("the round interior is not one simple polygon")
+        # only the designs this entry ships (PAPERS "designs" subset): a
+        # small disc box restricted to friction must not trip the bay guard
+        if "magnet-pedestal" in self.designs:
+            if self.r_int < BAY_W / 2.0 + CORNER_BLEND_R + 1.0:
+                fail(f"Ø{self.diameter:g} is too small for the {BAY_W:g} mm "
+                     "finger bay")
+            if (not self._is_simple(self.plinth)
+                    or self.plinth.area < 0.4 * self.interior.area
+                    or self.plinth.difference(self.interior).area > 1e-6):
+                fail("the D-shaped pedestal plinth is degenerate")
+        self._guard_pockets()
+        if "magnet-skirt" in self.designs:
+            self._guard_side_notches_round()
+        self._guard_grip_arcs_on_wall()
+        self._guard_round_layout()
+        self._guard_text_fits()
+
+    def _guard_side_notches_round(self, tol=0.05):
+        """Each side-notch window sits on plain CIRCULAR wall, inside and
+        out (clear of every lobe blend) — sampled along the circle, since a
+        tangent line leaves an r≈34 circle by ~2 mm at ±12 mm."""
+        for (px, py), nrm_deg in self._side_notch_frames():
+            r = math.hypot(px, py)
+            for t in (-NOTCH_W / 2.0 - 1.0, 0.0, NOTCH_W / 2.0 + 1.0):
+                a = nrm_deg + math.degrees(t / r)
+                off = max(
+                    Point(polar(r, a)).distance(self.interior.boundary),
+                    Point(polar(r + WALL_T, a)).distance(
+                        self.ext_skirt.boundary))
+                if off > tol:
+                    self._fail(f"side notch at {nrm_deg:g}° is {off:.2f} mm "
+                               "off its circular wall (a lobe blend runs "
+                               "into it)")
+
+    def _guard_round_layout(self):
+        """Grip windows and magnet lobes share one small circle: every pair
+        stays ROUND_MIN_GAP apart, measured on the wall + skirt hoop they cut,
+        and no skirt window can reach the scoop (dust slit) — not even with
+        the lid put on turned by 120° (lobes are 120°-symmetric). Every one
+        of these is a magnet-skirt feature (lobes, side notches, back notch
+        + ramp), so nothing to guard without that design."""
+        if "magnet-skirt" not in self.designs:
+            return
+        fail = self._fail
+        cm = CLEAR_MAGNET
+        hoop = self.ext_skirt.buffer(cm + SKIRT_T, quad_segs=QS).difference(
+            self.interior)
+        chan = self.ext_skirt.buffer(cm, quad_segs=QS).difference(
+            self.ext_plain.buffer(cm, quad_segs=QS))     # lid lobe channels
+        lobes = self.ext_skirt.difference(self.ext_plain)  # base lobes
+        arc = self.grip_arcs[0]
+        side = [(f"side notch at {n:g}°",
+                 slot_footprint(NOTCH_W, 24.0, xy, n).intersection(hoop))
+                for xy, n in self._side_notch_frames()]
+        back = slot_footprint(ARC_NOTCH_W, 30.0, arc.xy(arc.r),
+                              arc.deg).intersection(hoop)
+        scoop = slot_footprint(self.scoop_w, 60.0, arc.xy(arc.r),
+                               arc.deg).intersection(hoop)
+        pairs = [(name, w, "a magnet lobe", chan) for name, w in side]
+        pairs += [(name, w, "the back notch", back) for name, w in side]
+        pairs += [("the back notch", back, "a magnet lobe", chan),
+                  ("the scoop", scoop, "a magnet lobe", lobes)]
+        for a_name, a, b_name, b in pairs:
+            gap = a.distance(b)
+            if gap < ROUND_MIN_GAP:
+                fail(f"{a_name} comes within {gap:.2f} mm of {b_name} (need "
+                     f">= {ROUND_MIN_GAP:g}) — narrow it or shrink the pockets")
+        scoop_bottom = self.arc_notch_top + ARC_NOTCH_GAP
+        turned_band = scoop_bottom - (PLINTH + NOTCH_H)
+        if turned_band < ROUND_MIN_BAND:
+            fail(f"--notch-h {NOTCH_H:g}: a magnet-skirt lid put on turned by "
+                 f"120° sets a side notch over the scoop with only "
+                 f"{turned_band:.2f} mm of wall between them (need >= "
+                 f"{ROUND_MIN_BAND:g})")
+        # the back-notch ramp pivots about the straight tangent at the
+        # bisector, but the skirt curves away from it: toward the window
+        # flanks the skirt's inner face lies inside the pivot, where the
+        # tilted ramp cutter climbs (audit D6). The scoop's rounded bottom
+        # climbs too — compare both at every tangent offset t (both cutters
+        # are planar prisms, so their profiles don't vary with the radius).
+        z_top = self.arc_notch_top
+        r_in = self.r_int + WALL_T + cm
+        half, hs = ARC_NOTCH_W / 2.0, self.scoop_w / 2.0
+        rr = min(ARC_NOTCH_R, half - 0.25,
+                 (z_top - (PLINTH - 6.0)) / 2.0 - 0.25)
+        rs = min(SCOOP_R, hs - 0.25)  # slot_cutter's clamps
+        slope = ARC_NOTCH_CHAMFER / SKIRT_T
+
+        def corner_lift(t, w2, r):  # how far a rounded corner sits off the edge
+            c = t - (w2 - r)
+            return r - math.sqrt(max(r ** 2 - c ** 2, 0.0)) if c > 0 else 0.0
+
+        def band_at(t):  # scoop bottom − notch ceiling (skirt inner face)
+            ceiling = ((r_in - math.sqrt(r_in ** 2 - t ** 2)) * slope
+                       - corner_lift(t, half, rr))
+            return ARC_NOTCH_GAP + corner_lift(t, hs, rs) - ceiling
+
+        worst = min(band_at(t) for t in np.linspace(0.0, min(half, hs), 97))
+        if worst < ROUND_MIN_BAND - 0.01:  # ~ the gap itself near the bisector
+            fail(f"--arc-notch-gap {ARC_NOTCH_GAP:g}: on this round skirt the "
+                 f"back-notch ramp climbs toward its flanks, leaving only "
+                 f"{worst:.2f} mm below the scoop (need >= "
+                 f"{ROUND_MIN_BAND:g})")
+
+    # -- preview-only ghosts --------------------------------------------------
+
+    scenes = [{"name": "papers", "label": "Ghost filter stack",
+               "parts": ["papers"]}]
+
+    @property
+    def stack_h(self):
+        """Preview ghost height: a typical pack (PAPERS "stack_h"), never
+        above depth − 4 (the flat lids' lip reaches 2.5 mm down)."""
+        return min(self.cfg.get("stack_h", PREVIEW_STACK_H), self.depth - 4.0)
+
+    def sheet_outline(self):
+        """One sheet's footprint, centred: 1 mm of play shows all round."""
+        return disc_poly(self.r_disc, 180)
+
+    def paper_ghost(self, lift=0.0):
+        z0 = FLOOR_T + lift + 0.3
+        return prism(self.sheet_outline(), z0, z0 + self.stack_h)
+
+    # -- wording -----------------------------------------------------------------
+
+    @property
+    def paper_txt(self):
+        return f"paper discs up to Ø{self.diameter:g} mm"
+
+    @property
+    def interior_txt(self):
+        return f"Ø{2.0 * self.r_int:g} mm round"
+
+    @property
+    def geo_txt(self):
+        return (f"discs up to Ø{self.diameter:g} mm · round box ·\n"
+                f"       {DISC_SLACK:g} mm slack all round")
+
+    @property
+    def grip_txt(self):
+        return (f"friction lid: twist-off (no notches); magnet-skirt lid: "
+                f"side notches {NOTCH_W:.1f} x {NOTCH_H:.1f} mm at "
+                f"±{ROUND_NOTCH_DEG:.0f}°, back notch {ARC_NOTCH_W:.1f} x "
+                f"{ARC_NOTCH_H:.1f} mm, {ARC_NOTCH_GAP:.1f} mm band to its "
+                f"{self.scoop_w:.1f} mm scoop")
+
+
+CASE_CLASSES["round"] = RoundCase
+
+
 def make_case(slug):
-    return (ComboCase if "combines" in PAPERS[slug] else Case)(slug)
+    """The Case for one PAPERS entry: ComboCase for "combines", else the
+    class registered for its "shape" (default "wedge" -> Case)."""
+    cfg = PAPERS[slug]
+    if "combines" in cfg:
+        return ComboCase(slug)
+    shape = cfg.get("shape", "wedge")
+    if shape not in CASE_CLASSES:
+        raise ValueError(
+            f"{slug}: unknown shape {shape!r} (known: "
+            f"{', '.join(sorted(CASE_CLASSES))})")
+    return CASE_CLASSES[shape](slug)
 
 
 # --------------------------------------------------------------------------
@@ -1503,13 +2400,16 @@ def tolerance_summary():
             f"{POCKET_DEPTH - 3.0:.1f} mm recessed)")
 
 
-def shell_summary():
+def shell_summary(cove=None):
+    """cove: a case's pedestal_cove (default PEDESTAL_CHAMFER_WALL — the
+    round boxes cap theirs)."""
+    cove = PEDESTAL_CHAMFER_WALL if cove is None else cove
     s = (f"walls {WALL_T:.1f} / floor {FLOOR_T:.1f} / lid skirts "
          f"{SKIRT_T:.1f} mm; lid plates: friction {LID_T_FRICTION:.1f}, "
          f"magnet {LID_T_MAGNET:.1f} at rim & pockets / {LID_CORE_T:.1f} core")
-    if PEDESTAL_CHAMFER_BOTTOM > 0.0 or PEDESTAL_CHAMFER_WALL > 0.0:
+    if PEDESTAL_CHAMFER_BOTTOM > 0.0 or cove > 0.0:
         s += (f"; pedestal chamfers: foot {PEDESTAL_CHAMFER_BOTTOM:.1f} / "
-              f"wall cove {PEDESTAL_CHAMFER_WALL:.1f}")
+              f"wall cove {cove:.1f}")
     return s
 
 
@@ -1631,12 +2531,9 @@ def build_preview(case, parts_world):
                           f"skirt {CLEAR_MAGNET:.2f}, flat lip {LIP_CLEAR:.2f} mm"
                           + (f"; magnets sit {POCKET_DEPTH - 3.0:.1f} mm recessed"
                              if has_magnets else ""))
-    dims["shell"] = shell_summary()
+    dims["shell"] = shell_summary(case.pedestal_cove)
     if "magnet-skirt" in case.designs:
-        dims["grip"] = (f"side notches {NOTCH_W:.1f} x {NOTCH_H:.1f} mm; "
-                        f"skirt back notch {ARC_NOTCH_W:.1f} x "
-                        f"{ARC_NOTCH_H:.1f} mm, {ARC_NOTCH_GAP:.1f} mm band "
-                        f"to its scoop")
+        dims["grip"] = case.grip_txt
     def print_entry(design):
         entry = {
             "base": f"stl/{case.slug}-case-{design}-base.stl",

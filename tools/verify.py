@@ -15,6 +15,11 @@ can be verified the same way it is generated:
 
 Needs the ray-cast extras on top of requirements.txt — see
 requirements-dev.txt (`make verify` installs them into a throwaway container).
+
+Shape-extensible: every case has a KIND (kind(): "plain" wedge, "combo", or
+its PAPERS "shape"). What differs per kind lives in the per-kind tables
+(EXPECT + the PER-KIND TABLES section); a new kind adds its entries in its
+own marked block there and never edits the shared check functions.
 """
 
 import argparse
@@ -55,18 +60,25 @@ HOLE_GAP = 2.0        # mm a divider hole keeps from every pose of the paper
 # here is derived from generate.py, so a feature that silently drops out of
 # its lists would just shrink the number of checks and still pass. Counted on
 # generate's lists and, where a mesh can show it, on the meshes.
+# Keyed by kind(); new kinds add their row in their own block of the PER-KIND
+# TABLES section (EXPECT["<kind>"] = {...}). Every row needs the COUNTED keys;
+# optional: "side-notched lids" = the telescoping designs whose lid carries
+# the side notches (default: both — e.g. a twist-off round friction lid has
+# none, and the skirt-window count then demands zero there).
 EXPECT = {
     "plain": {"side notches": 2, "grip arcs": 1, "finger bays": 1,
               "magnet-skirt pairs": 4, "flat/pedestal pairs": 3},
     "combo": {"side notches": 3, "grip arcs": 2, "finger bays": 2,
               "magnet-skirt pairs": 4, "flat/pedestal pairs": 4},
 }
+COUNTED = ("side notches", "grip arcs", "finger bays", "magnet-skirt pairs",
+           "flat/pedestal pairs")
 
 
 def expected_extras(case, design):
-    """Plain papers ship no extras; a combo ships its loose plate + the
-    design's own table."""
-    if kind(case) == "plain":
+    """Only a combo ships extras: its loose plate + the design's own
+    table."""
+    if kind(case) != "combo":
         return []
     return ["divider", "divider-table-pedestal"
             if design == "magnet-pedestal" else "divider-table"]
@@ -182,7 +194,7 @@ class Design:
         # (below every scoop; above the pedestal's plinth and cove) — so the
         # wall and corner checks don't compare generate.py with itself
         ring = max(polys(section(self.base, self.floor + 0.5 + (
-            g.PEDESTAL_CHAMFER_WALL if self.pedestal else 0.0))),
+            case.pedestal_cove if self.pedestal else 0.0))),
             key=lambda p: p.area)
         self.mesh_outline = Polygon(ring.exterior)
         self.mesh_cavity = Polygon(max(ring.interiors,
@@ -190,13 +202,52 @@ class Design:
 
 
 def kind(case):
-    return "combo" if hasattr(case, "sectors") else "plain"
+    """"combo" for a two-paper box, else the PAPERS "shape" ("wedge" ->
+    "plain"). Works on a combo's sectors too (they are plain wedges)."""
+    if "combines" in case.cfg:
+        return "combo"
+    shape = case.cfg.get("shape", "wedge")
+    return {"wedge": "plain"}.get(shape, shape)
+
+
+def per_kind(table, case, name):
+    """table[kind(case)], or a clear error naming the missing entry."""
+    k = kind(case)
+    if k not in table:
+        raise NotImplementedError(
+            f"verify.py has no {name} entry for kind {k!r} — register it in "
+            "that kind's block of the PER-KIND TABLES section")
+    return table[k]
+
+
+def expect(case):
+    return per_kind(EXPECT, case, "EXPECT")
+
+
+def notched_lids(case):
+    """The telescoping designs whose lid carries the side notches."""
+    return expect(case).get("side-notched lids", ("friction", "magnet-skirt"))
+
+
+def probe(geom, case):
+    """(x, y) inside geom for a vertical probe ray: representative_point(),
+    which lies on (or just off) the y = 0 symmetry line of a mirrored
+    outline. The wedges keep that exact point (their results are pinned);
+    other kinds are nudged by PROBE_NUDGE — a round cavity's centre is where
+    the triangulation's diagonals meet, so a ray there may run down an edge."""
+    p = geom.representative_point()
+    dx, dy = PROBE_NUDGE.get(kind(case), DEFAULT_PROBE_NUDGE)
+    if dx or dy:
+        q = Point(p.x + dx, p.y + dy)
+        if geom.buffer(-0.5).contains(q):
+            return (q.x, q.y)
+    return (p.x, p.y)
 
 
 def papers_of(case):
-    """(paper, bisector deg) for every paper a case holds: a plain wedge lies
-    on +X; a combo's two sectors open from the shared wall."""
-    if hasattr(case, "sectors"):
+    """(paper, bisector deg) for every paper a case holds: a single-paper
+    case lies on +X; a combo's two sectors open from the shared wall."""
+    if kind(case) == "combo":
         return [(sec, sec.half) for sec in case.sectors]
     return [(case, 0.0)]
 
@@ -218,13 +269,14 @@ def check_parts(rep, d):
 
 
 def check_counts(rep, case):
-    want = EXPECT[kind(case)]
+    want = expect(case)
     have = {"side notches": len(case._side_notch_frames()),
             "grip arcs": len(case.grip_arcs),
             "finger bays": len(case._bays()),
             "magnet-skirt pairs": len(case.magnets_skirt),
             "flat/pedestal pairs": len(case.magnets_flat)}
-    for what, n in want.items():
+    for what in COUNTED:
+        n = want[what]
         rep.check(f"{n} {what}", have[what] == n, f"found {have[what]}")
     extras = sorted({e for name in case.designs
                      for e in expected_extras(case, name)})
@@ -264,9 +316,9 @@ def check_telescoping(rep, d):
     windows (side notches low, scoops high) only ever read wider."""
     rep.near("skirt bottom rides above the table", d.lid.bounds[0][2],
              g.PLINTH, 1e-6)
-    want = EXPECT[kind(d.case)]
-    windows = want["side notches"] + (
-        want["grip arcs"] if d.name == "magnet-skirt" else 0)
+    want = expect(d.case)
+    windows = (want["side notches"] if d.name in notched_lids(d.case)
+               else 0) + (want["grip arcs"] if d.name == "magnet-skirt" else 0)
     found = openings(section(d.lid, g.PLINTH + 1.0), d.mesh_cavity)
     rep.check(f"{windows} grip windows in the skirt's bottom edge",
               found == windows, f"found {found}")
@@ -303,8 +355,8 @@ def pocket_holes(sec):
 
 
 def check_pockets(rep, d):
-    n = EXPECT[kind(d.case)]["magnet-skirt pairs" if d.name == "magnet-skirt"
-                             else "flat/pedestal pairs"]
+    n = expect(d.case)["magnet-skirt pairs" if d.name == "magnet-skirt"
+                       else "flat/pedestal pairs"]
     roof = d.plate_t - g.POCKET_DEPTH
     in_base = pocket_holes(section(d.base, d.top - g.POCKET_DEPTH / 2.0))
     in_lid = pocket_holes(section(d.lid, d.top + g.POCKET_DEPTH / 2.0))
@@ -347,8 +399,7 @@ def check_recess(rep, d):
     core = (case.interior.buffer(-2.0, quad_segs=g.QS)
             if d.name == "magnet-skirt" else d.cavity.buffer(
                 -(g.LIP_CLEAR + g.LIP_T + 2.0), quad_segs=g.QS))
-    p = core.representative_point()
-    z = hits(d.lid, (p.x, p.y))
+    z = hits(d.lid, probe(core, case))
     rep.near("lid core thickness", z[-1] - z[-2], g.LID_CORE_T, 1e-3)
     # a rim point: mid-wall, away from pockets and grip windows
     ring = d.cavity.buffer(g.WALL_T / 2.0, quad_segs=g.QS).exterior
@@ -365,28 +416,44 @@ def check_recess(rep, d):
     rep.check("recess clear of the pockets", gap > 1.0, f"{gap:.2f} mm")
 
 
+def straight_wall(case, xy, nrm, t):
+    """SIDE_NOTCH_WALL sampler for a flat wall: the point t mm along the
+    interior wall face from a notch centre xy, and the outward normal there
+    (constant)."""
+    tx, ty = g.polar(1.0, nrm + 90.0)
+    return (xy[0] + t * tx, xy[1] + t * ty), nrm
+
+
 def check_side_notches(rep, d):
-    """Each bottom-edge grip notch sits on straight wall (inside and out) and
-    opens the skirt onto solid base wall."""
+    """Each bottom-edge grip notch sits on plain wall of its kind's shape
+    (inside and out — per SIDE_NOTCH_WALL) and opens the skirt onto solid
+    base wall. A lid without side notches is covered by the skirt-window
+    count in check_telescoping."""
+    if d.name not in notched_lids(d.case):
+        return
+    sample, shape = per_kind(SIDE_NOTCH_WALL, d.case, "SIDE_NOTCH_WALL")
+
+    def off(xy, nrm, t):
+        (qx, qy), n_deg = sample(d.case, xy, nrm, t)
+        mx, my = g.polar(1.0, n_deg)
+        return max(Point(qx, qy).distance(d.case.interior.boundary),
+                   Point(qx + g.WALL_T * mx,
+                         qy + g.WALL_T * my).distance(d.ext.boundary))
+
     z = g.PLINTH + g.NOTCH_H / 2.0
     for (px, py), nrm in d.case._side_notch_frames():
-        tx, ty = g.polar(1.0, nrm + 90.0)
         nx, ny = g.polar(1.0, nrm)
-        bend = max(
-            max(Point(px + t * tx, py + t * ty).distance(
-                    d.case.interior.boundary),
-                Point(px + t * tx + g.WALL_T * nx,
-                      py + t * ty + g.WALL_T * ny).distance(d.ext.boundary))
-            for t in np.linspace(-g.NOTCH_W / 2.0 - 1.0,
-                                 g.NOTCH_W / 2.0 + 1.0, 25))
+        bend = max(off((px, py), nrm, t)
+                   for t in np.linspace(-g.NOTCH_W / 2.0 - 1.0,
+                                        g.NOTCH_W / 2.0 + 1.0, 25))
         wall = (px + nx * g.WALL_T / 2.0, py + ny * g.WALL_T / 2.0)
         mid = g.WALL_T + d.clear + g.SKIRT_T / 2.0
         skirt = (px + nx * mid, py + ny * mid)
         ok = (bend <= 0.05 and inside(d.base, [[*wall, z]])[0]
               and not inside(d.lid, [[*skirt, z]])[0]
               and inside(d.lid, [[*skirt, g.PLINTH + g.NOTCH_H + 2.0]])[0])
-        rep.check(f"side notch at ({px:.0f}, {py:.0f}) on straight wall, "
-                  "opens onto the base", ok, f"{bend:.3f} mm off straight")
+        rep.check(f"side notch at ({px:.0f}, {py:.0f}) on {shape} wall, "
+                  "opens onto the base", ok, f"{bend:.3f} mm off {shape}")
 
 
 def solid_spans(mesh, xy):
@@ -464,17 +531,27 @@ def check_engraving(rep, d):
     rep.at_least("plate left under the engraving", z[-1] - z[-2], 1.0)
 
 
-def paper_shape(paper, rot, tab_corner=0):
-    """True paper outline on its bisector `rot`; tab_corner = -1 / +1 adds the
-    hanging tab at the low / high seam corner."""
+def wedge_paper(paper, tab_corner=0):
+    """PAPER_SHAPES entry of a plain wedge: the flat folded cone paper on +X,
+    tip at the origin (seat() slides it home past the filleted apex);
+    tab_corner = -1 / +1 adds the hanging tab at the low / high seam
+    corner."""
     poly = g.sector_poly(paper.angle, paper.side, steps_per_deg=6.0)
     if tab_corner:
         tab = shp_box(paper.side - 4.0, -TAB_W / 2.0,
-                      paper.side + paper.cfg["tab_extra"], TAB_W / 2.0)
+                      paper.side + paper.cfg.get("tab_extra", 0.0),
+                      TAB_W / 2.0)
         tab = tab.buffer(-3.0, quad_segs=24).buffer(3.0, quad_segs=24)
         at = tab_corner * (paper.angle / 2.0
                            - math.degrees((TAB_W / 2.0 + 1.0) / paper.side))
         poly = unary_union([poly, affinity.rotate(tab, at, origin=(0, 0))])
+    return poly
+
+
+def paper_shape(paper, rot, tab_corner=0):
+    """True paper outline (PAPER_SHAPES of the paper's kind) turned onto its
+    bisector `rot`."""
+    poly = per_kind(PAPER_SHAPES, paper, "PAPER_SHAPES")(paper, tab_corner)
     return affinity.rotate(poly, rot, origin=(0, 0))
 
 
@@ -509,7 +586,7 @@ def reach_along(geom, deg):
 
 def check_papers(rep, case):
     for paper, rot in papers_of(case):
-        corners = (0, -1, 1) if paper.cfg["tab_extra"] > 0.0 else (0,)
+        corners = (0, -1, 1) if paper.cfg.get("tab_extra", 0.0) > 0.0 else (0,)
         for corner in corners:
             span = seat(paper_shape(paper, rot, corner), rot, case.interior)
             tab = {0: "", -1: " + tab low", 1: " + tab high"}[corner]
@@ -522,20 +599,22 @@ def check_papers(rep, case):
 def check_pedestal(rep, d):
     case = d.case
     ped_top = g.FLOOR_T + g.PEDESTAL_H
-    p = case.plinth.buffer(-5.0).representative_point()
-    rep.near("plinth top height", hits(d.base, (p.x, p.y))[-1], ped_top, 1e-3)
+    rep.near("plinth top height",
+             hits(d.base, probe(case.plinth.buffer(-5.0), case))[-1],
+             ped_top, 1e-3)
     # every paper's arc edge must overhang its moat at its own finger bay,
-    # seated home (the worst case), by what a fingertip needs
-    # (less 0.1: both edges are polygonal arcs)
+    # seated home (the worst case), by what a fingertip needs — per kind
+    # (PEDESTAL_OVERHANG; less 0.1: both edges are polygonal arcs)
+    need = per_kind(PEDESTAL_OVERHANG, case, "PEDESTAL_OVERHANG")(case)
     for arc, (paper, rot) in zip(case.grip_arcs, papers_of(case)):
         sheet = seated(paper, rot, case.interior)
         rep.at_least(f"{paper.slug} overhang at its finger bay",
                      reach_along(sheet, arc.deg)
                      - reach_along(case.plinth, arc.deg),
-                     g.MOAT_W - g.RADIAL_SLACK - 0.1, 0.0)
+                     need - 0.1, 0.0)
     bays = [b for b in polys(d.mesh_cavity.difference(
         case.interior.buffer(0.3))) if b.area > 20.0]
-    want = EXPECT[kind(case)]["finger bays"]
+    want = expect(case)["finger bays"]
     rep.check(f"{want} finger bays bulge out of the cavity",
               len(bays) == want, f"found {len(bays)}")
     # foot chamfer: just above the floor nothing may poke through the walls
@@ -544,12 +623,261 @@ def check_pedestal(rep, d):
     rep.check("plinth foot chamfer stays inside the cavity",
               outline.symmetric_difference(case.ext_ped).area < 1.0)
     # wall cove: just above the plinth top nothing may overhang moat or bay
-    if g.PEDESTAL_CHAMFER_WALL > 0.0:
-        cove = section(d.base, ped_top + min(0.1, g.PEDESTAL_CHAMFER_WALL / 2))
+    if case.pedestal_cove > 0.0:
+        cove = section(d.base, ped_top + min(0.1, case.pedestal_cove / 2))
         stray = cove.intersection(d.cavity.buffer(-0.01)).difference(
             case.plinth.buffer(0.02))
         rep.check("wall cove stays on the plinth footprint",
                   stray.area < 0.01, f"{stray.area:.3f} mm2 outside")
+
+
+# --------------------------------------------------------------------------
+# PER-KIND TABLES — everything that differs between case kinds (see kind()).
+# The shared checks look entries up through per_kind(); a new kind registers
+# ALL of its entries in its OWN marked block (trapezoid / round slots below,
+# kept far apart so parallel edits never share a diff hunk) and never edits a
+# shared check function:
+#
+#   EXPECT[k]             feature-count row (COUNTED keys + optional
+#                         "side-notched lids") — see EXPECT at the top
+#   PAPER_SHAPES[k]       fn(paper, tab_corner=0) -> shapely Polygon: the true
+#                         sheet on +X, BEFORE the turn onto its bisector.
+#                         seat() slides it 0..30 mm along +X and takes the
+#                         first pose inside the cavity as "home", so start it
+#                         a little BEHIND its home (wedge: tip at the origin)
+#   SIDE_NOTCH_WALL[k]    (fn(case, xy, nrm_deg, t) -> ((x, y), normal_deg),
+#                         label): point t mm along the interior wall face
+#                         from a side notch's centre xy (outward normal
+#                         nrm_deg there) + the outward normal at that point;
+#                         label names the wall in the check ("straight")
+#   PEDESTAL_OVERHANG[k]  fn(case) -> mm the pushed-home paper edge must
+#                         overhang the plinth at its finger bay (check_pedestal
+#                         subtracts the 0.1 polygonal-arc allowance itself)
+#   CASE_CHECKS[k]        [fn(rep, case)] — extra checks, once per case
+#   DESIGN_CHECKS[k]      [fn(rep, d)]    — extra checks per design
+#                         (d: Design — d.case, d.name, d.base, d.lid, ...)
+#   PROBE_NUDGE[k]        optional (dx, dy) for probe(); unlisted kinds get
+#                         DEFAULT_PROBE_NUDGE
+#
+# Read module globals (g.MOAT_W, g.WALL_T ...) at CALL time, inside the
+# functions: apply_printer_args() rebinds them after import.
+# --------------------------------------------------------------------------
+
+
+def wedge_overhang(case):
+    """Pushed home a wedge's arc edge sits RADIAL_SLACK short of the wall,
+    so it overhangs the MOAT_W moat by the difference."""
+    return g.MOAT_W - g.RADIAL_SLACK
+
+
+PAPER_SHAPES = {"plain": wedge_paper}  # a combo's sectors are plain wedges
+SIDE_NOTCH_WALL = {"plain": (straight_wall, "straight"),
+                   "combo": (straight_wall, "straight")}
+PEDESTAL_OVERHANG = {"plain": wedge_overhang, "combo": wedge_overhang}
+CASE_CHECKS = {"plain": [], "combo": []}    # combo's own checks: see driver
+DESIGN_CHECKS = {"plain": [], "combo": []}
+PROBE_NUDGE = {"plain": (0.0, 0.0), "combo": (0.0, 0.0)}  # pinned results
+DEFAULT_PROBE_NUDGE = (0.31, 0.17)  # off y = 0 and off x = 0, kept inside
+
+
+# --------------------------------------------------------------------------
+# KIND "trapezoid" — TrapezoidCase (flat-bottom fan papers)
+# --------------------------------------------------------------------------
+TRAP_MIN_CLEAR = 1.0  # mm every registry sheet keeps to the side walls and
+                      # the arc, seated home (also its minimum push play)
+TRAP_MIN_CORNER_RUN = 0.3  # mm of FLAT bottom wall each pushed-home bottom
+                      # corner keeps before the corner fillet: a corner past
+                      # the flat run rides up the fillet (no sideways play,
+                      # the stack wedges). The widest bottoms keep 0.47-0.60
+                      # by construction (TRAP_SIDE_CLEAR square to the wall)
+TRAP_CORNER_ZONE = 2.0  # mm in front of the bottom wall that belong to the
+                      # corner check: the bottom fillets reach ~1.6 mm into
+                      # the cavity, and a side edge leaving a corner passes
+                      # the fillet's start as closely as the corner itself
+
+
+def trap_sheets(case):
+    """(label, (width, height, bottom)) of every sheet a trapezoid box must
+    hold: its reference sheet (sets the angle) + the registry "variants"."""
+    cfg = case.cfg
+    return ([("reference", (cfg["width"], cfg["height"], cfg["bottom"]))]
+            + [("variant", v) for v in cfg.get("variants", ())])
+
+
+def fan_sheet(case, width, height, bottom):
+    """A flat fan sheet on +X, its bottom edge 3 mm BEHIND the cavity's
+    bottom wall (read off the interior polygon, not generate's formula), so
+    seat() slides it in from outside and stops at the true home."""
+    angle, radius, bottom_x = g.fan_solve(width, height, bottom)
+    poly = g.fan_outline(angle, radius, bottom_x, steps_per_deg=6.0)
+    return affinity.translate(poly,
+                              case.interior.bounds[0] - 3.0 - bottom_x)
+
+
+def trapezoid_paper(paper, tab_corner=0):
+    """PAPER_SHAPES entry: the reference sheet (fan papers have no tab)."""
+    return fan_sheet(paper, paper.cfg["width"], paper.cfg["height"],
+                     paper.cfg["bottom"])
+
+
+def home_sheets(case):
+    """[(name, (c, h, b), sheet pushed home, (home, out))] for every
+    registry sheet; sheet / span None if it never fits."""
+    out = []
+    for label, (c, h, b) in trap_sheets(case):
+        shape = fan_sheet(case, c, h, b)
+        span = seat(shape, 0.0, case.interior)
+        sheet = None if span is None else moved(shape, 0.0, span[0])
+        out.append((f"{label} {c:g} x {h:g} x {b:g} sheet", (c, h, b), sheet,
+                    span))
+    return out
+
+
+def side_lines(case):
+    """The two straight side walls as long lines, measured on the interior
+    polygon: through its boundary at 15 and 35 mm in front of the bottom
+    wall (both on the plain run between the corner fillets)."""
+    x0 = case.interior.bounds[0]
+    out = []
+    for side in (+1, -1):
+        pts = []
+        for x in (x0 + 15.0, x0 + 35.0):
+            cut = LineString([(x, -1e4), (x, 1e4)]).intersection(
+                case.interior.exterior)
+            pts.append(max((p.coords[0] for p in getattr(cut, "geoms", [cut])),
+                           key=lambda q: side * q[1]))
+        (ax, ay), (bx, by) = pts
+        k = 1e3 / math.dist(pts[0], pts[1])  # stretch to +-1 m
+        dx, dy = k * (bx - ax), k * (by - ay)
+        out.append((side, LineString([(ax - dx, ay - dy),
+                                      (ax + dx, ay + dy)])))
+    return out
+
+
+def bottom_wall(case):
+    """(flat y range, walls): the FLAT part of the bottom wall, read off the
+    interior polygon, and the rest of its boundary — side walls, arc and
+    every corner fillet."""
+    x0 = case.interior.bounds[0]
+    ys = [y for x, y in case.interior.exterior.coords if x < x0 + 1e-6]
+    flat = LineString([(x0, min(ys)), (x0, max(ys))])
+    return (min(ys), max(ys)), case.interior.exterior.difference(
+        flat.buffer(1e-6))
+
+
+def check_fan_solve(rep, case):
+    """The solved outline reproduces every registry sheet's width / height /
+    bottom, measured on the polygon (guards fan_solve itself)."""
+    worst = 0.0
+    for _, (c, h, b) in trap_sheets(case):
+        angle, radius, bottom_x = g.fan_solve(c, h, b)
+        poly = g.fan_outline(angle, radius, bottom_x, steps_per_deg=6.0)
+        minx, miny, _, maxy = poly.bounds
+        edge = LineString([(minx + 1e-9, -1e4), (minx + 1e-9, 1e4)]
+                          ).intersection(poly).length
+        worst = max(worst, abs(maxy - miny - c),
+                    abs(reach_along(poly, 0.0) - minx - h), abs(edge - b))
+    rep.check("fan outlines reproduce width / height / bottom", worst <= 0.01,
+              f"worst {worst:.4f} mm")
+
+
+def check_trap_home(rep, case):
+    """Pushed home, the registry sheet with the WIDEST bottom edge (it sets
+    the bottom wall) rests on the bottom wall and both its bottom corners
+    keep TRAP_SIDE_CLEAR square to the side walls."""
+    sheets = home_sheets(case)
+    name, (_, _, b), sheet, _ = max(sheets, key=lambda s: s[1][2])
+    if sheet is None:
+        rep.check(f"widest-bottom {name} seats home", False, "no fit")
+        return
+    rep.near(f"widest bottom ({b:g}): pushed home, the bottom edge rests on "
+             "the bottom wall", sheet.bounds[0] - case.interior.bounds[0],
+             0.0, 0.05)
+    edge = [q for q in sheet.exterior.coords if q[0] < sheet.bounds[0] + 1e-6]
+    for side, line in side_lines(case):
+        corner = max(edge, key=lambda q: side * q[1])
+        rep.at_least(f"widest bottom ({b:g}): corner {'+' if side > 0 else '-'}"
+                     "Y keeps its gap square to the side wall",
+                     Point(corner).distance(line), g.TRAP_SIDE_CLEAR, 0.02)
+
+
+def check_trap_sheets(rep, case):
+    """EVERY registry sheet (reference + variants) seated home: rests on the
+    bottom wall with >= TRAP_MIN_CLEAR of push play; both bottom corners on
+    the FLAT bottom wall with >= TRAP_MIN_CORNER_RUN before the corner
+    fillets ("corners on fillet" otherwise); sides and arc >=
+    TRAP_MIN_CLEAR from the walls INCLUDING every fillet (beyond the corner
+    zone, which the corner check covers)."""
+    (y_lo, y_hi), walls = bottom_wall(case)
+    x0 = case.interior.bounds[0]
+    for name, (c, h, b), sheet, span in home_sheets(case):
+        if sheet is None:
+            rep.check(f"{name} fits seated home", False, "no fit")
+            continue
+        play = span[1] - span[0]
+        rest = sheet.bounds[0] - x0
+        rep.check(f"{name} rests on the bottom wall, >= {TRAP_MIN_CLEAR:g} mm "
+                  "push play", rest <= 0.05 and play >= TRAP_MIN_CLEAR,
+                  f"{rest:.3f} mm off the wall, play {play:.2f} mm")
+        edge = [q for q in sheet.exterior.coords
+                if q[0] < sheet.bounds[0] + 1e-6]
+        corners = [min(edge, key=lambda q: q[1]), max(edge, key=lambda q: q[1])]
+        on_fillet = [q for q in corners if not y_lo < q[1] < y_hi]
+        run = min(Point(q).distance(walls) for q in corners)
+        rep.check(f"{name}: bottom corners on the flat wall, >= "
+                  f"{TRAP_MIN_CORNER_RUN:g} mm before the fillets",
+                  not on_fillet and run >= TRAP_MIN_CORNER_RUN,
+                  "corners on fillet" if on_fillet else
+                  f"{run:.2f} mm of flat wall left")
+        pts = [p for p in ring_points(sheet, 0.25)
+               if p.x > sheet.bounds[0] + TRAP_CORNER_ZONE]
+        clear = min(p.distance(walls) for p in pts)
+        near = min(p.distance(walls) for p in ring_points(sheet, 0.1)
+                   if p.x > sheet.bounds[0] + 1e-3)
+        rep.check(f"{name}: sides and arc >= {TRAP_MIN_CLEAR:g} mm from the "
+                  "walls incl. fillets",
+                  clear >= TRAP_MIN_CLEAR,
+                  f"{clear:.2f} mm (corner zone: {near:.2f})")
+
+
+def check_trap_overhang(rep, d):
+    """Pedestal: EVERY registry sheet, pushed home, overhangs the moat at
+    the finger bay by >= MOAT_W - RADIAL_SLACK (less 0.1 for the polygonal
+    arcs) — across the bay's flat width, the plinth edge read off the base
+    mesh just below the plinth top (the shared check seats the reference
+    sheet only)."""
+    if not d.pedestal:
+        return
+    case = d.case
+    sec = section(d.base, g.FLOOR_T + g.PEDESTAL_H - 1.0)
+    moat = max((Polygon(r) for p in polys(sec) for r in p.interiors),
+               key=lambda q: q.area)
+    half = g.BAY_W / 2.0 - g.CORNER_BLEND_R
+    need = g.MOAT_W - g.RADIAL_SLACK
+    for name, _, sheet, _ in home_sheets(case):
+        if sheet is None:
+            continue
+        gaps = []
+        for y in np.linspace(-half, half, 23):
+            line = LineString([(0.0, y), (1e3, y)])
+            edge, plinth = line.intersection(sheet), line.intersection(moat)
+            # an empty cut (broken section) must fail, never pass as NaN
+            gaps.append(-1e9 if edge.is_empty or plinth.is_empty
+                        else edge.bounds[2] - plinth.bounds[0])
+        rep.at_least(f"{name}: overhang at the finger bay", min(gaps),
+                     need - 0.1, 0.0)
+
+
+EXPECT["trapezoid"] = {"side notches": 2, "grip arcs": 1, "finger bays": 1,
+                       "magnet-skirt pairs": 4, "flat/pedestal pairs": 4}
+PAPER_SHAPES["trapezoid"] = trapezoid_paper
+SIDE_NOTCH_WALL["trapezoid"] = (straight_wall, "straight")
+# pushed home the fan's arc edge sits RADIAL_SLACK short of the wall on the
+# bisector, exactly like a wedge's -> the same MOAT_W - RADIAL_SLACK
+PEDESTAL_OVERHANG["trapezoid"] = wedge_overhang
+CASE_CHECKS["trapezoid"] = [check_fan_solve, check_trap_home,
+                            check_trap_sheets]
+DESIGN_CHECKS["trapezoid"] = [check_trap_overhang]
 
 
 # --------------------------------------------------------------------------
@@ -651,6 +979,237 @@ def check_print_extras(rep, case):
 
 
 # --------------------------------------------------------------------------
+# KIND "round" — RoundCase (flat paper discs)
+# --------------------------------------------------------------------------
+
+
+def disc_paper(paper, tab_corner=0):
+    """PAPER_SHAPES entry of a round box: one disc (a CIRCUMSCRIBED 720-gon,
+    so it never undersizes the sheet), started 0.51 mm BEHIND its home —
+    seat() slides it +X until it clears the -X wall."""
+    n = 720
+    r = paper.r_disc / math.cos(math.pi / n)
+    x0 = -(paper.r_int - paper.r_disc) - 0.51
+    return Polygon([(x0 + r * math.cos(2.0 * math.pi * k / n),
+                     r * math.sin(2.0 * math.pi * k / n)) for k in range(n)])
+
+
+def circle_wall(case, xy, nrm, t):
+    """SIDE_NOTCH_WALL sampler for the round bore: t mm ALONG the circle from
+    the notch centre xy (a tangent line leaves an r≈34 circle by ~2 mm at
+    ±12 mm), and the radial outward normal there."""
+    r = math.hypot(*xy)
+    a = nrm + math.degrees(t / r)
+    return g.polar(r, a), a
+
+
+def disc_overhang(case):
+    """D-shaped plinth, moat MOAT_W deep in front of the bay: a disc pushed
+    to the far (-X) wall keeps MOAT_W − 2·DISC_SLACK over it."""
+    return g.MOAT_W - 2.0 * g.DISC_SLACK
+
+
+def push_range(shape, rot, cavity):
+    """seat() refined by bisection to 1e-4 mm: (home, out) of a sheet
+    sliding along `rot` (seat steps 0.02 mm — too coarse for a ±0.05 play
+    check)."""
+    span = seat(shape, rot, cavity)
+    if span is None:
+        return None
+    inside_ = prep(cavity)
+
+    def fits(t):
+        return inside_.contains(moved(shape, rot, t))
+
+    def edge(lo, hi):  # fits(lo) != fits(hi)
+        want = fits(hi)
+        for _ in range(40):
+            mid = (lo + hi) / 2.0
+            lo, hi = (lo, mid) if fits(mid) == want else (mid, hi)
+        return (lo + hi) / 2.0
+
+    home, out = span
+    return edge(max(home - 0.02, 0.0), home), edge(out, out + 0.02)
+
+
+def check_disc_play(rep, case):
+    """A flat disc can't wedge: the play is the radial slack, both ways."""
+    for rot in (0.0, 90.0):
+        span = push_range(paper_shape(case, rot), rot, case.interior)
+        play = -1.0 if span is None else span[1] - span[0]
+        rep.near(f"disc play along {rot:g}° = 2 x DISC_SLACK", play,
+                 2.0 * g.DISC_SLACK, 0.05)
+    # the REGISTRY value (RoundCase.stack_h clamps it, so a too-tall entry
+    # would otherwise be cut down silently): a typical pack must leave room
+    # for the flat lids' lip
+    raw = case.cfg.get("stack_h", g.PREVIEW_STACK_H)
+    rep.at_least("registry stack_h fits under the flat lids' lip",
+                 case.depth - 4.0 - raw, 0.0, 0.0)
+
+
+def check_round_cove(rep, d):
+    """Pedestal: the wall cove runs all round the bore, under the disc
+    edges — a centred disc of the largest size must still lie flat on the
+    plinth: the bore just above the plinth top (mesh section) keeps >= 0.1
+    mm beyond the disc's radius."""
+    if not d.pedestal:
+        return
+    sec = section(d.base, g.FLOOR_T + g.PEDESTAL_H + 0.05)
+    hole = max((Polygon(r) for p in polys(sec) for r in p.interiors),
+               key=lambda q: q.area)
+    rep.at_least("largest disc lies flat on the plinth (cove clear)",
+                 Point(0.0, 0.0).distance(hole.exterior) - d.case.r_disc,
+                 0.1)
+
+
+def check_round_ghost(rep, d):
+    """Flat / pedestal lids: the preview's ghost stack tops out at least
+    1 mm below the lowest point of the closed lid (its alignment lip),
+    measured on the meshes."""
+    if d.telescoping:
+        return
+    ghost = max((p["mesh"] for p in d.case.ghosts(d.name)
+                 if p["name"] == "papers"), key=lambda m: m.bounds[1][2])
+    rep.at_least("ghost stack top below the lid's lip",
+                 d.lid.bounds[0][2] - ghost.bounds[1][2], 1.0)
+
+
+def ring_cover(sec, r, step=0.25):
+    """Per angle (0, step, ... < 360°): does the cross-section have material
+    at radius r? (one boolean per step)"""
+    ok = prep(sec)
+    return np.array([ok.contains(Point(g.polar(r, a)))
+                     for a in np.arange(0.0, 360.0, step)])
+
+
+def runs(mask):
+    """Circular runs of True in a boolean ring: [(start index, length)]."""
+    n = len(mask)
+    if mask.all():
+        return [(0, n)]
+    start = int(np.argmin(mask))  # begin on a False, so no run wraps
+    out, i = [], 0
+    while i < n:
+        if mask[(start + i) % n]:
+            j = i
+            while j < n and mask[(start + j) % n]:
+                j += 1
+            out.append(((start + i) % n, j - i))
+            i = j
+        else:
+            i += 1
+    return out
+
+
+def min_solid_between(missing, r, step=0.25):
+    """Shortest stretch of material (mm along radius r) between two
+    consecutive missing runs of a ring."""
+    solid = runs(~missing)
+    return min((n * step for _, n in solid), default=360.0) * math.pi * r / 180.0
+
+
+def check_round_skirt(rep, d):
+    """Telescoping lids round the circle. friction: twist-off — the skirt's
+    bottom edge is unbroken all round. magnet-skirt: the three windows and
+    the three lobe channels are six separate openings, ROUND_MIN_GAP of
+    plain skirt apart (measured just inside the skirt's inner face)."""
+    if not d.telescoping:
+        return
+    case = d.case
+    want = expect(case)
+    r_in = case.r_int + g.WALL_T + d.clear + 0.05
+    missing = ~ring_cover(section(d.lid, g.PLINTH + 1.0), r_in)
+    found = len(runs(missing)) if missing.any() else 0
+    if d.name == "friction":
+        xy = [g.polar(r_in + g.SKIRT_T / 2.0, a + 0.13)
+              for a in np.arange(0.0, 360.0, 1.0)]
+        loc, idx, _ = d.lid.ray.intersects_location(
+            np.array([[x, y, -1000.0] for x, y in xy]),
+            np.tile([0.0, 0.0, 1.0], (len(xy), 1)), multiple_hits=True)
+        low = [loc[idx == i][:, 2].min() for i in range(len(xy))
+               if (idx == i).any()]
+        rep.check("twist-off lid: no notch anywhere round the skirt",
+                  found == 0 and len(low) == len(xy)
+                  and max(abs(z - g.PLINTH) for z in low) < 1e-6,
+                  f"{found} openings; skirt edge {min(low):.3f}-"
+                  f"{max(low):.3f} mm over {len(low)}/{len(xy)} rays")
+        return
+    n = want["side notches"] + want["grip arcs"] + want["magnet-skirt pairs"]
+    rep.check(f"{n} separate skirt openings (notches + lobe channels)",
+              found == n, f"found {found}")
+    rep.at_least("plain skirt between notches and lobes",
+                 min_solid_between(missing, r_in), g.ROUND_MIN_GAP)
+
+
+def check_round_ramp(rep, d):
+    """Audit D6: the back-notch ramp pivots about the straight tangent at the
+    bisector while the skirt curves away, so toward the flanks the ceiling
+    climbs. At ±ARC_NOTCH_W/3 (just inside the rounded corners) and on the
+    bisector the dust band to the scoop must survive: at least
+    ARC_NOTCH_GAP − ARC_NOTCH_CHAMFER, never under ROUND_MIN_BAND."""
+    if d.name != "magnet-skirt":
+        return
+    case = d.case
+    r_in = case.r_int + g.WALL_T + d.clear + 0.05
+    r_wall = case.r_int + g.WALL_T / 2.0
+    need = max(g.ROUND_MIN_BAND, g.ARC_NOTCH_GAP - g.ARC_NOTCH_CHAMFER)
+    for t in (-(g.ARC_NOTCH_W / 3.0 - 0.07), 0.3, g.ARC_NOTCH_W / 3.0 - 0.07):
+        ceiling = solid_spans(d.lid, (math.sqrt(r_in ** 2 - t ** 2), t))[0][0]
+        scoop = solid_spans(d.base, (math.sqrt(r_wall ** 2 - t ** 2), t))[0][1]
+        rep.at_least(f"back notch at y={t:+.1f}: band to the scoop "
+                     f"(ceiling {ceiling:.2f})", scoop - ceiling, need)
+
+
+def check_round_wall(rep, d):
+    """Scoop (friction / magnet-skirt) on plain circular wall, ROUND_MIN_GAP
+    clear of every magnet lobe; pedestal: the finger bay's channel keeps
+    (nearly) its BAY_W from the bore out to its front fillets — on a small
+    circle the bay box's inner fillets could pinch the entrance."""
+    case = d.case
+    if d.telescoping:
+        z = d.top - g.POCKET_DEPTH - 1.0
+        sec = section(d.base, z)
+        scoop = ~ring_cover(sec, case.r_int + g.WALL_T / 2.0)
+        bumps = ring_cover(sec, case.r_int + g.WALL_T + 0.05)
+        n = expect(case)["magnet-skirt pairs"] if d.name == "magnet-skirt" \
+            else 0
+        found = (len(runs(scoop)) if scoop.any() else 0,
+                 len(runs(bumps)) if bumps.any() else 0)
+        rep.check(f"1 scoop and {n} lobes on the wall", found == (1, n),
+                  f"found {found[0]} + {found[1]}")
+        if n:
+            rep.at_least("plain wall between the scoop and the lobes",
+                         min_solid_between(scoop | bumps,
+                                           case.r_int + g.WALL_T),
+                         g.ROUND_MIN_GAP)
+    if d.pedestal:
+        # narrowest chord of the cavity (mesh) across the bay's run: from
+        # where the bore itself is BAY_W wide out to the front fillets
+        r = case.r_int
+        x0 = math.sqrt(r ** 2 - (g.BAY_W / 2.0) ** 2)
+        x1 = r + g.BAY_D - g.CORNER_BLEND_R
+        width = min(
+            LineString([(x, -500.0), (x, 500.0)]).intersection(
+                d.mesh_cavity).length
+            for x in np.linspace(x0, x1, 41))
+        rep.at_least("finger bay channel keeps its width into the bore",
+                     width, g.BAY_W - 0.5)
+
+
+EXPECT["round"] = {"side notches": 2, "grip arcs": 1, "finger bays": 1,
+                   "magnet-skirt pairs": 3, "flat/pedestal pairs": 3,
+                   # twist-off friction lid: no notches (user decision)
+                   "side-notched lids": ("magnet-skirt",)}
+PAPER_SHAPES["round"] = disc_paper
+SIDE_NOTCH_WALL["round"] = (circle_wall, "circular")
+PEDESTAL_OVERHANG["round"] = disc_overhang
+CASE_CHECKS["round"] = [check_disc_play]
+DESIGN_CHECKS["round"] = [check_round_skirt, check_round_ramp,
+                          check_round_wall, check_round_ghost,
+                          check_round_cove]
+
+
+# --------------------------------------------------------------------------
 # driver
 # --------------------------------------------------------------------------
 
@@ -665,12 +1224,17 @@ def verify_paper(slug):
         rep.check("case builds", False, f"{type(e).__name__}: {e}")
         return g.PAPERS[slug]["display"], rep.rows
     rep.check("case builds", True)
-    check_counts(rep, case)
-    check_papers(rep, case)
-    combo = hasattr(case, "divider_holes")
-    if combo:
-        check_divider_holes(rep, case)
-        check_print_extras(rep, case)
+    combo = kind(case) == "combo"
+    try:
+        check_counts(rep, case)
+        check_papers(rep, case)
+        if combo:
+            check_divider_holes(rep, case)
+            check_print_extras(rep, case)
+        for check in per_kind(CASE_CHECKS, case, "CASE_CHECKS"):
+            check(rep, case)
+    except Exception as e:  # a missing table entry or a crash must fail
+        rep.check("checks ran", False, f"{type(e).__name__}: {e}")
     for name in case.designs:
         rep.scope = name
         try:
@@ -692,6 +1256,8 @@ def verify_paper(slug):
                 check_pedestal(rep, d)
             if combo:
                 check_table(rep, case, d)
+            for check in per_kind(DESIGN_CHECKS, case, "DESIGN_CHECKS"):
+                check(rep, d)
         except Exception as e:  # a broken part must fail, never crash the run
             rep.check("checks ran", False, f"{type(e).__name__}: {e}")
     return case.cfg["display"], rep.rows
