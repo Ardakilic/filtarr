@@ -39,5 +39,7 @@ vendor:
 	$(RUN) python:3.14-slim python3 tools/fetch_three.py
 
 clean:
-	rm -rf deep27/stl v60/stl combo/stl deep27/docs v60/docs combo/docs
+	rm -rf deep27/stl v60/stl combo/stl kalita/stl aeropress/stl
+	rm -rf deep27/docs v60/docs combo/docs kalita/docs aeropress/docs
 	rm -f deep27/preview*.html v60/preview*.html combo/preview*.html
+	rm -f kalita/preview*.html aeropress/preview*.html

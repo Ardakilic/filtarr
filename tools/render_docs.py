@@ -115,7 +115,9 @@ def render_grid(g, case, out_path):
 
 def render_engraving(g, case, out_path):
     """Crisp 2D top view of the flat lid, in the reader's orientation. By
-    default the wedge tip points toward the reader: world (x, y) -> view
+    default (engrave_rot -90) the box's +X end — the arc with the scoop /
+    pry slot — points away from the reader, so the wedge tip, the fan's flat
+    bottom wall or a round box's far side faces them: world (x, y) -> view
     (h, v) = (-y, x); papers engraved along +X (engrave_rot 0, the combo) are
     shown as modelled."""
     fig, ax = plt.subplots(figsize=(8, 6), dpi=130)

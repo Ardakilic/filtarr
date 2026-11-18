@@ -1,7 +1,8 @@
 # CLAUDE.md — Filtarr
 
-Parametric 3D-printed storage boxes for pour-over filter papers (project/brand name:
-**Filtarr**). Everything (STLs, previews, index.html, README images) is **generated
+Parametric 3D-printed storage boxes for pour-over filter papers — wedge boxes for
+flat cone papers, flat-bottom fan boxes for Kalita papers, round boxes for AeroPress
+discs (project/brand name: **Filtarr**). Everything (STLs, previews, index.html, README images) is **generated
 from Python** — never edit STLs or generated HTML by hand; change `generate.py` and
 regenerate.
 
@@ -15,24 +16,33 @@ License: dual — MIT for code (`LICENSE`), CC BY 4.0 for models/images
 ## Layout
 
 ```
-generate.py                  shared engine: PAPERS registry + Case / ComboCase classes
-                             (always instantiate via make_case(slug)) + export/preview
+generate.py                  shared engine: PAPERS registry + Case (wedge) / TrapezoidCase
+                             / ComboCase / RoundCase (always instantiate via
+                             make_case(slug): "combines" -> ComboCase, else
+                             CASE_CLASSES[cfg "shape"]) + export/preview
                              + build_index() -> index.html (Pages landing page)
 preview_template.html        template for the self-contained 3D previews
 Makefile / Dockerfile        canonical build path: everything runs in Docker
 .github/workflows/pages.yml  publishes the whole checkout to GitHub Pages on push to main
 tools/render_docs.py         README image renderer (matplotlib, loops all papers via make_case)
 tools/verify.py              geometry self-test: every PAPERS entry × design, built in memory
-                             (never touches outputs) -> PASS/FAIL table, exit 1 on failure
+                             (never touches outputs) -> PASS/FAIL table, exit 1 on failure;
+                             shape-specific checks in per-kind tables
 tools/fetch_three.py         downloads latest three.module.min.js + three.core.min.js
 vendor/                      both three.js files + THREE_VERSION (committed)
 LICENSE / LICENSE-MODELS     MIT (code) / CC BY 4.0 (models & images)
-HOWTO.md                     how to add a new paper variant (keep in sync with PAPERS)
+HOWTO.md                     how to add a new paper (per shape) / a new shape (keep in sync)
+RESEARCH.md                  sourced paper research (2026-11-18): Kalita fans, AeroPress, and
+                             the research-only families (Origami, Kalita Wave, Kalita 104,
+                             machine papers) + open measurement requests
 index.html                   generated Pages landing page — never edit by hand
 deep27/                      CAFEC Deep 27 outputs: stl/, docs/, preview.html
 v60/                         V60 outputs: 01, 02, cafec-01, cafec-02 (stl/, docs/, preview-*.html)
 combo/                       Combo (Deep 27 + V60 01) outputs: stl/ (12 design STLs + 3 divider
                              STLs), docs/, preview.html
+kalita/                      Kalita fan outputs: 101, 102, 103 (stl/, docs/, preview-*.html)
+aeropress/                   AeroPress outputs: standard + xl (stl/, docs/, preview.html,
+                             preview-xl.html)
 requirements.txt             PINNED (==, incl. transitive) — see the reproducibility gotcha
 requirements-dev.txt         pinned ray-cast extras for tools/verify.py (rtree, scipy, …)
 ```
@@ -45,8 +55,9 @@ design, `build_extra(name)` returns them in PRINT orientation — the plate as
 modelled, the tables legs-up). Design keys:
 `friction | magnet-skirt | magnet-flat | magnet-pedestal` (also the preview tab
 keys). A PAPERS entry may restrict designs via `"designs": (...)`; currently
-all six entries (five papers + the combo) ship all four designs (the CAFEC
-entries were friction-only briefly — the user asked for all of them).
+all eleven entries (ten papers + the combo) ship all four designs (the CAFEC
+entries were friction-only briefly — the user asked for all of them). 135
+STLs in all (11 × 12 + the combo's 3 dividers).
 
 ## Commands
 
@@ -95,6 +106,13 @@ reproducibility gotcha.)
   `ENGRAVE_POS_FRAC`); absolute sizes (walls, pockets, scoop) are shared constants.
   A `"combines"` entry builds a `ComboCase(Case)` instead (two papers, one box —
   see the combo section of the design map); `make_case(slug)` picks the class.
+  Other outlines: PAPERS `"shape"` (default `"wedge"`) -> `CASE_CLASSES`
+  (`wedge` Case, `trapezoid` TrapezoidCase, `round` RoundCase; an unknown shape
+  raises a ValueError naming the known ones). Every class keeps the wedge's
+  frame — mid-arc grips on +X at `grip_arcs[0]` — so the shared builders
+  (scoop, back notch + ramp, pry slot, finger bay, lids, lip, recess, pockets)
+  run unchanged; a shape overrides only `_derive_paper_geometry()` and the
+  layout / sizing hooks (see "Shape hooks" in the design map).
 - **Docker as canonical build**: the Dockerfile (`python:3.14-slim`, Debian slim —
   the slim flavour chosen per docker-library/python guidance: pre-built wheels,
   small image; pinned to the minor since 2026-09-21, was the floating
@@ -108,7 +126,8 @@ reproducibility gotcha.)
   Docker image's metric-compatible Arial substitute — the canonical output) →
   regular weights. Gotcha: `FontProperties(family="sans-serif")` must be
   `family=["sans-serif"]` (a bare string is parsed as a fontconfig pattern → crash).
-- **Previews are fully self-contained** (~8–12 MB each): the latest three.js
+- **Previews are fully self-contained** (~10–19 MB each; the round ones ~16 MB —
+  720-gon bores — the combo 19): the latest three.js
   **ES-module** build (UMD was dropped after r160) is base64-embedded in
   `<script type="text/plain">` blocks and loaded at runtime via **blob dynamic
   imports** — no import maps, works offline from `file://` in Safari/Chrome/
@@ -134,11 +153,13 @@ reproducibility gotcha.)
   design, and **scenes** choose which show together — `Case.scenes`
   (name / label / part names) → `DATA.scenes`, `Case.default_scene` →
   `DATA.scene`. One scene renders as the old on/off checkbox (plain papers:
-  "Ghost paper stack"); several turn it into "Show contents" + a radio list
+  "Ghost paper stack"; round: "Ghost filter stack"); several turn it into "Show contents" + a radio list
   (combo: each paper alone / both + loose plate / both + table; default
   `table`). Gotcha: the template's `ROWS` list FILTERS the Dimensions keys — a
   new `dims` key is silently dropped unless added there (`divider` and `table`
-  were).
+  were). Per-shape wording goes through Case properties instead (`paper_txt`,
+  `interior_txt`, `geo_txt`, `grip_txt` → the existing `grip` key), so the
+  template stays untouched (editing it rewrites every preview).
   Smoke-test embedded payloads without a browser: extract both b64 blocks from a
   generated preview, write them side by side, `node -e "import('./three.module.min.js')"`.
 - **Verification without a browser/GPU** (no headless Chrome for screenshots).
@@ -159,7 +180,43 @@ reproducibility gotcha.)
   fails the run, and "no sharp re-entrant cavity corner" measured on a mesh
   cross-section (guards the combo's r6 shoulder closing). A new
   paper is covered automatically (it loops PAPERS); a new FEATURE needs a new
-  check there. The **two gates before committing an engine change**:
+  check there. Shape-extensible: `kind(case)` = `plain` / `combo` / the PAPERS
+  `shape`; what differs per kind lives in the PER-KIND TABLES (`EXPECT` with
+  its COUNTED keys + optional `"side-notched lids"`, `EXPECTED_EXTRAS`
+  (fn(case, design) → the extras that design must ship; unlisted kinds ship
+  none — combo: plate + the design's table), `PAPER_SHAPES`,
+  `SIDE_NOTCH_WALL`, `PEDESTAL_OVERHANG`, `CASE_CHECKS`, `DESIGN_CHECKS`,
+  `PROBE_NUDGE` — plain/combo keep (0, 0) so their results stay pinned, other
+  kinds default to (0.31, 0.17) because a ray through a round cavity's centre
+  can run down a triangulation edge). A missing entry or a crashing case
+  check becomes a "checks ran" FAIL row, not a dead run. Trapezoid: fan solve
+  reproduces c/h/b; the WIDEST-bottom registry sheet pushed home rests on the
+  wall with both corners at TRAP_SIDE_CLEAR (square to the side lines); EVERY
+  registry sheet (reference + `variants`) seats home with ≥ 1 mm play, both
+  corners on the FLAT bottom wall ≥ `TRAP_MIN_CORNER_RUN` 0.3 before the
+  fillets ("corners on fillet" otherwise — measured on interior.boundary),
+  sides + arc ≥ 1 mm from the walls INCLUDING the fillets outside the 2 mm
+  corner zone (the corner zone's own minimum, 0.38–0.50 beside the widest
+  bottoms, is printed for information), and on the pedestal ≥ MOAT_W −
+  RADIAL_SLACK of overhang across the bay, plinth edge read off the base
+  mesh (`check_trap_overhang`; an empty cut fails). Round: disc play =
+  2·DISC_SLACK on two axes, twist-off friction lid (0 openings, skirt edge at
+  PLINTH on 360 rays), 6 skirt windows ≥ ROUND_MIN_GAP apart, ramp-vs-scoop
+  band at the window flanks, magnet-skirt lid turned ±120° (lid mesh
+  rotated about Z: the side-notch ceiling over the scoop keeps ≥
+  ROUND_MIN_BAND to the base's scoop bottom across the scoop —
+  `check_round_turned_lid`, the mesh twin of the generate-time turned-lid
+  guard), scoop + 3 lobes on plain wall, pedestal bay
+  channel width, the largest disc lies flat on the plinth (bore just above
+  it ≥ r_disc + 0.1 — the capped cove), the REGISTRY `stack_h` ≤ depth − 4
+  (RoundCase.stack_h clamps, so the clamped value can't fail; an entry
+  without `stack_h` is checked at its effective capped height) and the ghost
+  top ≥ 1 mm under the flat lids' lip (meshes). `check_round_ramp` is
+  belt-and-braces: audit item D6 (the ramp climbing toward the window
+  flanks) is moot on the round boxes — the 27 mm scoop's U-shaped bottom
+  rises faster than the ramp, so the narrowest band is always on the
+  bisector, which `check_grip_arcs` measures. Current run: 11 papers, 44
+  designs, 1360 checks. The **two gates before committing an engine change**:
   (1) `make verify` passes, (2) the same-image hash gate shows the papers you
   did not mean to touch are byte-identical (see the reproducibility gotcha).
   Complements — for looking, not gating:
@@ -199,10 +256,30 @@ Cone with full apex angle A → flat sector `360·sin(A/2)`° → folded wedge
   users (cup 4 friction fits a 200 mm bed vs 220 for the all-brands V60-02).
   Papers fluff up after opening; keep generous slack (V60 community lesson: boxes
   repeatedly had to be rescaled).
+- **Kalita 101/102/103 (fan)** — full sources in RESEARCH.md §2: a truncated
+  sector (sides meet in a VIRTUAL apex, straight crimped bottom edge `b`, top
+  arc concentric with the apex — traced on Kalita's own render, ±1 %); from a
+  flat sheet's chord `c`, centre height `h`, bottom `b`: solve t = α/2 from
+  c/(2 sin t) − b/(2 tan t) = h, R = c/(2 sin t), d = b/(2 tan t). Reference
+  sheets (c, h, b — they set the box angle; the box is sized over them AND
+  the variants): 101 (138, 80, 53) → 73.3°; 102 (165, 105, 53) → 70.9°; 103
+  (195, 130, 56) → 70.0°. FP bags 45/50 mm per 100, NK 40/45 → depth 58
+  holds those with headroom (≥ 5.5 mm even under the flat lids' 2.5 mm lip
+  band); Kalita's boxed 珈琲屋さん line (≈ 57–58 max stack, estimated from
+  its box size, low confidence) is NOT guaranteed to fit unsqueezed. No tab.
+  FP = NK = boxed 40P names; 101 = 1–2 cups, 102 = 2–4, 103 = 4–7. ≈ Melitta 1x1 / 1x2 / 1x4 BY OVERALL
+  SIZE (Melitta 1x2 160 × 105 / 47 and Brooks 102 165 × 103 / 54 are verify
+  variants of the 102; the 1x1 / 1x4 bottoms and angles are unverified). The
+  101 bottom (50) has one retail source, the 103 bottom (56) none from Kalita.
+- **AeroPress** — RESEARCH.md §3: Standard (Original / Clear / Go / Premium /
+  Go Plus) Ø63.5 spec, listings up to Ø65; XL Ø73.7 (max 74); ~0.12 mm/sheet
+  → 350-pack 44 typical / 50 worst, XL 200-pack 25 / 29. Aesir 0.22 mm/sheet,
+  CAFEC 0.15, metal discs Ø61–63.5 — all fit the Standard box.
 
 ## Design map (4 designs × plain/engraved lid = 8 variants per paper)
 
-Shared: interior = paper angle + 3° slack, R_INT = side + rounded-apex offset
+Shared (wedge numbers; the fan and round shapes have their own sections
+below): interior = paper angle + 3° slack, R_INT = side + rounded-apex offset
 (`apex_tip_x`) + 3.5 slack + tab_extra; interior depth = per-paper `depth`
 (default `DEPTH` 42; Deep 27 & cup 1: 47, cup 4: 54); walls/floor 2.0
 (reduced from 2.4 on 2026-07-20 print feedback — "bulletproof"; friction lid
@@ -246,8 +323,9 @@ solid one. Don't "optimize" slabs; thin walls instead.
 - **magnet-flat**: user's preferred reference style (orange corner-magnet box /
   "MAG BOX" CAD image): flat 4.6 mm lay-on lid + 2.5 mm alignment lip, 3 magnet pairs
   in smoothly blended corner bulges (apex + both wide-end corners; centres found by
-  `Case._step_out` marching until the pocket clears the interior; the combo has
-  four convex corners → 4 pairs). No scoop (the
+  `Case._step_out` marching until the pocket clears the interior; the combo and
+  the Kalita fans have four convex corners → 4 pairs; round boxes 3 bulges at
+  120°). No scoop (the
   whole top opens) — instead a 20 × 2.2 mm pry slot under the lid edge mid-arc.
 - **magnet-pedestal**: magnet-flat shell + easy paper picking. Added 2026-07-12
   after the user found flat-lid picking hard; he chose it over a bay-only fix
@@ -306,14 +384,20 @@ same ones): `--clear-friction` `--clear-magnet` `--lip-clear` `--pocket-d`
 `--pocket-depth` `--wall-t` `--floor-t` `--skirt-t` `--divider-t`
 `--divider-clear` `--divider-leg-h` `--notch-w` `--notch-h` `--arc-notch-w`
 `--arc-notch-h` `--arc-notch-gap` `--arc-notch-chamfer` `--scoop-w`
-`--scoop-above-floor` `--chamfer-bottom` `--chamfer-side-wall`.
+`--scoop-above-floor` `--chamfer-bottom` `--chamfer-side-wall`. Unchanged by
+the Kalita / AeroPress shapes (no new flags); on round boxes `--scoop-w` is
+scaled by ROUND_SCOOP_SCALE 0.75 and `--notch-w` / `--notch-h` reach only the
+magnet-skirt lid (the friction lid is twist-off).
 
 Engraving: `ENGRAVE_TEXT` = "Filtarr" (the project/brand name), 0.6 mm deep
 (3 layers), 60 mm wide, centred at 0.7·R_INT on the bisector. Orientation is a
 **user decision that was already flipped once**: text up-vector = **+X**, i.e.
 upright when the wedge TIP points at the reader (the default `engrave_rot` −90
 in `Case.text_geometry` encodes this). Don't "fix" it again without asking.
-Per-paper `"engrave_rot"` / `Case.engrave_xy` exist only for the combo (below).
+Per-paper `"engrave_rot"` exists only for the combo (below); `engrave_xy` is
+set per class (wedge 0.7·R_INT on the bisector, combo and fan the interior
+centroid, round the centre) and `engrave_width` is a hook (round lids:
+1.4·r_int). The new shapes keep the −90 rule (agent choice, see their record).
 
 ### Combo case — `PAPERS["combo"]`, `ComboCase`: Deep 27 + V60 01 in one box
 
@@ -530,15 +614,222 @@ with their current tools."
   round-four independent re-verification of the tables; all of it is now
   encoded in `make verify`, which is the thing to re-run.
 
+### Shape hooks on `Case` (2026-11-18) — why the new shapes are byte-neutral
+
+Scaffold for TrapezoidCase / RoundCase, all on `Case`: sizing hooks are
+PROPERTIES read at call time (`apply_printer_args` rebinds the module globals
+after import — a class attribute would freeze the defaults): `scoop_w`
+(SCOOP_W), `friction_scoop_bottom` (FLOOR_T + SCOOP_ABOVE_FLOOR),
+`engrave_width` (ENGRAVE_WIDTH), `arc_notch_top`, `grip_txt` (preview `grip`
+row); method `lid_notch_cutters(design)` (= `notch_cutters(arc_notch=design ==
+"magnet-skirt")`). `_plinth` reads `cfg.get("tab_extra", 0.0)`; `_step_out`
+raises after 1 m of steps instead of hanging. Shared guards `_fail`,
+`_is_simple`, `_guard_pockets` (0.4 skin, all three magnet designs),
+`_guard_side_notches_straight`, `_guard_grip_arcs_on_wall`,
+`_guard_text_fits` only read outlines; the combo calls them (identical
+messages and order), the plain wedge does NOT (its layout is pinned).
+ComboCase rejects non-wedge members. Each hook returns exactly the
+expression the inline code used, evaluated in the same order — proven by the
+same-image hash gate: 82/82 identical (75 STL + 6 previews + index) on two
+image IDs, an override gate (`--scoop-w 30 --scoop-above-floor 6 --floor-t
+1.8 --wall-t 1.8`: 78 files differ from default, HEAD == new) and again after
+both shapes were merged (every legacy STL, preview and docs PNG unchanged;
+only index.html gains cards).
+Review-fix round (2026-11-18): `pedestal_cove` property (PEDESTAL_CHAMFER_WALL;
+RoundCase caps it) used by `build_base`, `shell_summary(cove)` for the
+preview Shell row (the legacy string is unchanged), `_guard_pockets` skips
+designs a PAPERS "designs" subset doesn't ship (all legacy entries ship
+all four). `clean_union(mesh)` = Manifold.simplify(1e-5) over a unioned
+mesh — called ONLY by TrapezoidCase / RoundCase `build_base` for the
+pedestal base: the plinth unioned against cavity walls whose fillets are
+discretised differently leaves zero-volume sliver shells (in memory every
+pedestal base, legacy too, is "watertight" with 3–34 split bodies); in the
+float32 STL their vertices merge into non-manifold edges (kalita-102's first
+version: one edge on 58 faces, 92 bodies). After it all 60 new STLs reload
+as single watertight bodies; the 8 legacy STLs that don't (5 wedge pedestal
+bases, the combo's pedestal base and skirt lids) stay as published —
+running it on them would rewrite their bytes. Gates after this round: all
+93 legacy files (75 STL + 6 previews + 12 docs PNGs) byte-identical after
+`make`, and an override gate (`--chamfer-side-wall 0.6 --chamfer-bottom
+1.0`, pre-fix vs new generate.py in memory: every legacy base + lid and
+the shell text identical).
+
+### Kalita fan — `TrapezoidCase` (`"shape": "trapezoid"`)
+
+- **Registry**: `width` (top chord c), `height` (centre height h), `bottom`
+  (crimp edge b) = a REFERENCE sheet of the size — it sets the box ANGLE
+  (fan angle + ANGLE_SLACK); optional `variants` ((c, h, b), …) = the other
+  real sheets; the box is sized so EVERY listed sheet fits (some variants
+  are larger in one dimension: 101 b 55, Brooks 102 b 54, generic 103 c 200)
+  and verify seats each one; `tab_extra` 0.0; `depth` 58. `side` / `angle`
+  are REJECTED in `_derive_paper_geometry` (fail-loud, like RoundCase; the
+  combo rejects a trapezoid member).
+  `fan_solve(width, height, bottom)` → (angle, R, d) by a fixed 200-step
+  bisection (deterministic; ValueError unless b < c and h > √(c² − b²)/2),
+  `fan_outline` = sector ∩ the bottom half-plane.
+- **Frame**: virtual apex at the origin, opening +X, arc concentric; a flat
+  bottom wall at `x_bottom` cuts the apex off, so all mid-arc features and
+  the corner stepping run unchanged. Interior = reference fan angle +
+  ANGLE_SLACK about the virtual apex, clipped at x_bottom, r4 fillet, sized
+  over ALL registry sheets (review fix, 2026-11-18 — the first version sized
+  from the reference only: kalita-101's (134, 80, 55) sheet landed its
+  corners ON the fillets, 0.17 mm clearance, no sideways play):
+  x_bottom = the HOME rule from the engine audit applied to the WIDEST
+  bottom (`bottom_max`): pushed home, its corners keep `TRAP_SIDE_CLEAR` 2.0
+  (or the fillet term, if larger) square to the side walls — the naive
+  "RADIAL_SLACK behind d" left ~0 there and the stack wedges; every sheet's
+  corners then land on the FLAT wall, the widest with `corner_run` =
+  side_gap/cos h − fillet_run = 0.60 / 0.51 / 0.47 mm of flat wall before
+  the fillet (= its sideways play each way). r_int = the farthest
+  pushed-home arc point of any sheet + RADIAL_SLACK (sheet i's apex sits at
+  s = x_bottom − d_i: that point is its bisector point x_bottom + h_i while
+  s ≥ 0, else its arc corner — kalita-101's (134, 80, 55) has s = −3.4, so
+  its corners set the 101's arc and the other sheets get 4.08 there). Plinth
+  radius `plinth_r` = the SHORTEST sheet's bisector reach + RADIAL_SLACK −
+  MOAT_W (`_plinth` override; like tab_extra widening the V60 moat): every
+  sheet overhangs the moat ≥ 11.5 at the bay — moats 15.6 / 20 / 18 mm
+  (first version: Kalita's own 160 × 100 sheets got 6.5 in the 102, 193 ×
+  127 ones 8.5 in the 103). Interiors 84 × 76° (flat 60) / 109 × 74° (59) /
+  134 × 73° (61). `TRAP_WALL_MARGIN` 2.0 = plain wall between a notch window
+  and the fillet / the side-lobe blend. Sideways play of the widest-bottom
+  sheet is only ~0.5–0.6 mm each way (r4 fillet); 2.5 would give ~1.2 and a
+  ~1 mm wider box.
+- **Grips**: 2 side notches at NOTCH_FRAC·r_int CLAMPED onto the plain
+  straight run — on all three sizes the clamp wins: just past the bottom
+  fillet, ~12 mm in front of the bottom wall (notch_rho 63.6 / 64.1 / 66.3);
+  nothing on the bottom wall. Scoop / back notch / pry slot / bay inherited;
+  the moat is the widened `_plinth` above. Reach pinch → thumb notch
+  ≈ 121 mm on the 103 (Deep 27 box 110).
+- **Magnets**: skirt 4 pairs (arc ±13° + 1 per side at MAG_SIDE_FRAC·r_int,
+  clamped beyond the notch and short of the arc fillet); flat/pedestal 4
+  pairs, one per convex corner (bottom corners heading ±(135 + half/2), arc
+  corners ±(half + 45)).
+- **Engraving**: house rule −90 (upright with the bottom wall toward the
+  reader), 60 mm, centred at the interior centroid's x on the bisector.
+- **kalita-102 height 105** (lead agent, 2026-11-18): Kalita 102 sheets are
+  100–103, but at the first envelope (165, 103, 53) Melitta 1x2 (160, 105, 47)
+  had 1.48 mm play; 105 restores 3.48. Brooks 102 (165, 103, 54) became a
+  variant (1.60 clearance / 5.48 play). Every sheet's numbers: RESEARCH.md §2.
+- **Pedestal cove**: the inherited 1.2 mm wall cove also runs along the flat
+  bottom wall, under the crimp edges (edge kiss like at the tip; the
+  `pedestal_cove` hook could change it per shape) — not print-tested.
+- **Flat-lid headroom**: the depth 58 does NOT include the flat / pedestal
+  lids' 2.5 mm alignment lip (the AeroPress depths do): along the walls —
+  exactly where the pushed-home crimped edges lie — those lids leave 55.5
+  mm, ≥ 5 mm above a 50 mm bag stack (58 elsewhere and on the telescoping
+  designs). A 58 mm boxed-line stack would be pressed 2.5 mm there.
+- **Mesh cleanup**: `build_base` override runs `clean_union`
+  (Manifold.simplify(1e-5)) on the pedestal base — see Shape hooks.
+- **Guards** (`_check`): simple interior; EVERY registry sheet, pushed home
+  0.02 off the wall: both corners on the FLAT bottom wall (measured on
+  interior.boundary: inside the flat run, and ≥ corner_run − 0.05 of flat
+  wall to the fillet — replaces the old analytic check that could never
+  fire) and the sheet inside the interior; the reference sheet keeps
+  ≥ side_gap − 0.05 above the corner zone; notch window on the
+  straight run with margin; side lobe beside it and short of the arc fillet;
+  notch window ≥ 1 mm from the lobe blend (0.05 tol — the closing tilts the
+  run by up to 0.04 at --wall-t 3); arc lobes on plain arc, pockets ≥ 1 mm
+  from the scoop slot; + the shared four. Fail early: kalita-101 `--scoop-w
+  50` (arc pocket), `--notch-w 40` (101 side too short; limit ≈ 39.5).
+
+### Round — `RoundCase` (`"shape": "round"`)
+
+- **Registry**: `diameter` = the largest disc to hold (bore Ø = diameter +
+  2·`DISC_SLACK` 1.0), optional `stack_h` (preview ghost, ≤ depth − 4 —
+  RoundCase.stack_h clamps, verify checks the raw value); side / angle /
+  tab_extra are REJECTED. Wording: "discs up to Ø65 mm" (AeroPress spec is
+  Ø63.5). aeropress Ø65 → Ø67 × 55 (stack 44),
+  aeropress-xl Ø75 → Ø77 × 35 (stack 25): worst pack + LIP_H 2.5 (in a close
+  bore the flat lid's lip comes down over the disc edges) + margin.
+- **Interior**: explicit 720-gon (`disc_poly`, `ROUND_SEGMENTS`) whose
+  INSCRIBED radius is r_int, edge midpoints on multiples of 0.5° (bisector /
+  ±60° / ±120° points lie exactly on the bore); no r4 opening.
+  `grip_arcs = [BisectorFrame(r_int)]` → scoop / back notch / pry slot / bay
+  at 0°.
+- **Friction**: TWIST-OFF lid, no notches (`lid_notch_cutters` → [] —
+  user decision); scoop at the default height.
+- **Magnet-skirt** (tripod): side notches at ±`ROUND_NOTCH_DEG` 120 (lid
+  only), back notch + ramp at 0°, 3 lobes at `ROUND_SKIRT_MAG_DEGS` 60 / 180 /
+  −60 midway between the windows — fingers in the side notches, thumb on the
+  back ledge, the ±60° pairs peel first, 180° hinges. 120°-symmetric → the lid
+  fits 3 ways; in 2 of them a plain side notch sits over the scoop (band =
+  derived scoop bottom − notch top = 6 mm; the guard fires at --notch-h >
+  15.2). A keyed (asymmetric) layout was NOT built.
+- **Flat / pedestal**: 3 bulges at `ROUND_FLAT_MAG_DEGS` 180 / ±60, centres
+  `polar(r_int + clr)` (exact; no `_step_out` jitter) → the flat lid snaps on
+  in any orientation (README: base magnets same pole up); the pedestal lid is
+  keyed by its bay.
+- **Pedestal**: D-shaped plinth = bore ∩ {x ≤ r_int − MOAT_W}, opening/closing
+  2 → moat only in front of the bay; worst-case overhang MOAT_W − 2·DISC_SLACK
+  = 13.0 on the bisector; across the bay's width (|y| ≤ 15) the pushed-away
+  stack keeps 9.3 (Ø65) / 7.7 (Ø63.5); XL 9.9 / 8.5 — README says "11.5–13 at
+  the middle of the bay". The INHERITED bay is fine: the CORNER_BLEND_R
+  closing that builds interior_ped keeps the channel 33.85 (Ø67) / 33.99
+  (Ø77) of 34 mm — the engine audit's "~30 mm, too narrow" was measured
+  before that closing. Wall cove: `pedestal_cove` = min(PEDESTAL_CHAMFER_WALL,
+  DISC_SLACK − 0.2) = 0.8 by default (the shared 1.2 is wider than the 1 mm
+  disc slack: the largest discs rode on it all round, ~0.2 mm up centred, up
+  to 1.2 pushed aside; now a centred Ø65 / Ø75 disc lies flat with 0.2 to
+  spare — verify `check_round_cove`); a smaller --chamfer-side-wall still
+  applies; the preview Shell row shows the capped value.
+- **Sizing**: `scoop_w` = `ROUND_SCOOP_SCALE` 0.75 × SCOOP_W (27 mm; a
+  --scoop-w override scales, not capped); `engrave_width` = min(60,
+  `ROUND_ENGRAVE_FRAC` 1.4·r_int) = 46.9 / 53.9, centred, house −90.
+- **Guards** (ValueError — an extreme flag aborts the whole generate run),
+  each only for the designs the entry SHIPS (a "designs" subset — e.g. a
+  Ø40 friction-only box builds): simple bore; pedestal: r_int ≥ BAY_W/2 +
+  CORNER_BLEND_R + 1 and D-plinth ≥ 40 % of the bore; pockets
+  (`_guard_pockets` skips unshipped designs); magnet-skirt:
+  `_guard_side_notches_round` (curved wall) and the whole
+  `_guard_round_layout`; grip arcs; text. `_guard_round_layout` —
+  notches / back notch / scoop / lobes ≥
+  `ROUND_MIN_GAP` 3 apart on the hoop, the 120°-turned side-notch band ≥
+  `ROUND_MIN_BAND` 0.8, and the back-notch ramp vs the scoop's U bottom at
+  every tangent offset (the ramp pivots on the bisector tangent while the
+  skirt curves away, so it climbs toward the flanks — audit D6; in practice
+  the U-shaped scoop bottom climbs faster, so this never binds before the
+  bisector band). Fire at `--notch-h 16`, `--scoop-w 60` (Standard),
+  `--pocket-d 9.4`.
+- `sheet_outline` / `paper_ghost` are the hooks a future nested-cup subclass
+  (Kalita Wave, basket filters) overrides.
+
+### Decision record 2026-11-18 (Kalita + AeroPress round)
+
+USER DECISIONS: box Kalita 101 / 102 / 103 (104 research only); AeroPress
+Standard + XL; all four designs everywhere — round magnet-skirt included
+despite the crowding warning ("make it work and guard it"); round friction lid
+twist-off with NO side notches (a turning lid could set a notch over the scoop
+→ dust slit); Origami, Kalita Wave 155/185, Kalita 104 and drip-machine papers
+research only → RESEARCH.md, boxes in a follow-up PR, no PAPERS entries.
+AGENT choices awaiting his review: Kalita flat/pedestal 4 pairs (one per
+corner); engraving house rule kept on both shapes (narrower centred text on
+round lids); kalita-102 height 105; TRAP_SIDE_CLEAR 2.0; round scoop scale
+0.75; tripod magnet-skirt with 120° symmetry instead of a keyed layout;
+D-shaped round plinth; depths 58 / 55 / 35; the display name "AeroPress
+Standard (Original / Clear / Go / Premium)" (integrator). After the two
+reviews (geometry + code/docs), lead-agent decisions: size each Kalita box
+over EVERY registry sheet (widest bottom → bottom wall, farthest arc →
+r_int, shortest sheet → moat), the registry (c, h, b) staying the
+reference that sets the angle; round pedestal cove capped at DISC_SLACK −
+0.2; round guards gated on the shipped designs; `clean_union` on the new
+pedestal bases (subclass-only).
+
 ## Adding a paper (checklist — details in HOWTO.md)
 
 1. Add a `PAPERS` entry in `generate.py`: `display`, `folder`, `side`, `angle`,
    `tab_extra`, optional `designs` subset. Wedge angle from the dripper cone:
-   `180·sin(cone_angle/2)`. A two-paper box instead takes
+   `180·sin(cone_angle/2)`. A flat-bottom fan paper takes `"shape":
+   "trapezoid"` + `width` / `height` / `bottom` (a REFERENCE flat sheet:
+   chord, centre height, crimp edge — sets the angle) + optional `variants`
+   (every other sheet to hold; the box is sized over all of them); a paper disc takes
+   `"shape": "round"` + `diameter` (largest disc) + optional `stack_h`; a new
+   outline family = a new Case subclass in `CASE_CLASSES` + its verify.py
+   per-kind block (HOWTO "A new shape"). A two-paper box instead takes
    `"combines": (long_narrow_slug, short_wide_slug)` (+ optional `engrave_rot`,
    `depth`) — no side/angle of its own; any code looping PAPERS must go through
-   `make_case(slug)` and the `paper_txt` / `interior_txt` / `geo_txt` wording
-   properties rather than reading `case.side` / `case.angle`. A new folder also
+   `make_case(slug)` and the `paper_txt` / `interior_txt` / `geo_txt` /
+   `grip_txt` wording properties rather than reading `case.side` /
+   `case.angle`. A new folder also
    needs a line in the Makefile `clean` target (the only hard-coded folder list).
 2. `make` — regenerates STLs, the paper's preview, index.html and docs images;
    glance at the printed bounding boxes/volumes for sanity.
@@ -546,7 +837,8 @@ with their current tools."
    automatically; `--paper <slug>` narrows it while iterating). Then open the
    preview: ghost-paper toggle must show slack to every wall.
 4. Update README by hand: supported-papers table + gallery entry (renders image
-   + live preview link). index.html needs nothing — it's generated.
+   + live preview link) + previews list; HOWTO / AGENTS / RESEARCH.md if the
+   counts or the research change. index.html needs nothing — it's generated.
 5. Commit + push to `main` — Pages republishes automatically.
 
 ## Conventions & gotchas
@@ -585,8 +877,8 @@ with their current tools."
   STLs built from HEAD sources (`git show HEAD:generate.py` into a scratch
   dir) vs the new sources — never reason from a git diff that also spans a
   toolchain change. Generation is deterministic on one image.
-  Git cost: the six previews total ~76 MB and are rewritten by every
-  regeneration; with the pinned toolchain they stay byte-stable, so only real
+  Git cost: the eleven previews total ~146 MB (the five added on 2026-11-18:
+  ~67 MB) and are rewritten by every regeneration; with the pinned toolchain they stay byte-stable, so only real
   changes cost git history — another reason not to bump pins casually.
   Renovate: origin has a `renovate/configure` branch (Renovate onboarding,
   seen 2026-09-21) — once enabled, its PRs will bump these pins; each bump
@@ -601,15 +893,13 @@ with their current tools."
   next to the `fonts-liberation` install line. A font change would re-triangulate ONLY the
   `*-lid-engraved.stl` files; if those alone churn after an image rebuild,
   compare that md5 first.
-  STILL OPEN (user's call): the 65 legacy generated files (60 STLs + 5
-  previews) whose bytes changed purely from that earlier drift. Since the
-  pins now match the toolchain that produced them, COMMITTING them is the
-  consistent choice (a `git restore` would bring back bytes no pinned build
-  can reproduce) — a recommendation, not a decision.
+  The 65 legacy files whose bytes had changed purely from that earlier drift
+  were committed with the pins (33ed0f1) — the committed bytes are what the
+  pinned image reproduces.
 - Previews carry an "← All papers" link hard-coded to `../index.html` — previews
   must stay exactly one folder below the repo root or the link breaks.
-- Keep the README supported-papers table, README gallery and HOWTO.md in sync
-  with `PAPERS` (the Pages index syncs itself).
+- Keep the README supported-papers table, README gallery, HOWTO.md, AGENTS.md
+  and RESEARCH.md in sync with `PAPERS` (the Pages index syncs itself).
 - The Pages site was enabled once via
   `gh api -X POST repos/Ardakilic/filtarr/pages -f build_type=workflow` — the
   workflow token cannot create it (only deploy to it).
@@ -645,7 +935,11 @@ with their current tools."
   (2026-09-21): "Bed size is not important now. Users can slice already with
   their current tools." → do NOT flag bed limits prominently any more and
   don't pad docs with bed-fit analysis; one factual "largest part as
-  exported" line is enough, go further only if he asks.
+  exported" line is enough, go further only if he asks. Largest parts as
+  exported (2026-11-18, after the review fixes): Kalita 101 / 102 / 103
+  107 × 166 / 131 × 193 / 156 × 223 mm (pedestal base; the flat parts are
+  as long, 12 mm narrower), AeroPress Standard / XL 90 × 75 / 100 × 84 mm
+  (pedestal base).
 - Combo box (2026-09-21): shape C, depth 47 + divider, all four designs, and
   the second-round requests (engraving confirmed, two holes, table divider,
   V60-end grips, W_horn notch, pinned requirements, no bed-size talk) were
@@ -657,10 +951,38 @@ with their current tools."
   the re-entrant shoulder (a telescoping lid over a non-convex 175 mm profile
   is less forgiving than a convex one — may want a looser `--clear-friction`);
   (4) the V60-end scoop + thumb notch — addressed the 139 mm reach point on
-  paper (≈ 92 mm now), not print-tested. Also open: commit vs restore the 65
-  drift-rebuilt legacy generated files (recommendation: commit — see the
-  reproducibility gotcha), and the `python:3.14-slim` base pin, which was the
-  agent's addition.
+  paper (≈ 92 mm now), not print-tested. Also open: the `python:3.14-slim`
+  base pin, which was the agent's addition.
+- Kalita + AeroPress (2026-11-18, branch feature/kalita-aeropress): user
+  decisions and the agent choices awaiting his review are in the design-map
+  decision record. Nothing print-tested: Kalita — the crimp edge against the
+  flat bottom wall (and the pedestal's 1.2 mm cove along it), the widest
+  bottoms' ~0.5 mm of flat wall before the corner fillets, the side notches
+  just past the bottom fillets, the widened pedestal moats (15.6 / 20 / 18
+  mm — tall sheets overhang up to 16.5 mm: droop?), the 55.5 mm under the
+  flat lids' lip along the walls, every fit (all sheet numbers are research /
+  retail values, none measured on his papers — RESEARCH.md §7 lists the
+  measurement requests); AeroPress — the twist-off friction fit on a Ø71
+  base, the 3-pair magnet-skirt hold (lighter than the wedges' 4) and its
+  tripod opening, disc droop over the 15 mm pedestal moat, the discs on the
+  0.8 mm cove. Known properties (pre-existing, legacy boxes too — NOT fixed
+  here, one line each): (a) flat / pedestal lids: a steep straight
+  sightline through the pry slot under the lip (LIP_H 2.5 reaches only 0.3
+  below PRY_H 2.2's slot floor; a ~33° ray); (b) magnet-skirt: a ~85° sightline from the cavity
+  through the scoop, down the 0.5 glide gap and out through the back notch
+  (round lids turned 120°: the side notch) on boxes whose cavity ceiling is
+  above ~43 mm (Kalita, AeroPress Standard, Deep 27, V60; not the XL) —
+  the 6 mm band holds, the gap is the path; (c) friction: a scoop → skirt
+  gap c → open skirt bottom sightline opens once 10 + 14/c drops below the
+  cavity ceiling, so the deep Kalita boxes (ceiling 60) get one at
+  `--clear-friction` > 0.28 (0.3 mm margin at the default; AeroPress
+  Standard > 0.30, Deep 27 > 0.36) — the README's 0.32 tuning example
+  does that on a Kalita box. Known verify gap
+  (pre-existing, every paper incl. legacy v60-01): `check_grip_arcs` "back
+  notch height" probes 0.05 mm inside the skirt, so `--arc-notch-chamfer` ≳ 2
+  fails it. Legacy gap: the plain wedge has no generate-time guard for a wide
+  `--scoop-w` cutting into the arc pockets (v60-cafec-01 at 50: written
+  silently, caught by verify's pocket count) — the new shapes guard it.
 - Test file (2026-09-21): before committing the combo Arda asked that the
   test cover the new case. None existed — not in any branch or in history —
   so the session's throwaway verification scripts were promoted to the
